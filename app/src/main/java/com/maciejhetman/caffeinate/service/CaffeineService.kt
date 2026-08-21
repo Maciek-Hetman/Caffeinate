@@ -41,7 +41,7 @@ class CaffeineService : LifecycleService() {
                 return START_NOT_STICKY
             }
             ACTION_START, null -> {
-                val duration = DurationPreset.fromName(intent?.getStringExtra(EXTRA_DURATION))
+                val duration = DurationPreset.fromSerialized(intent?.getStringExtra(EXTRA_DURATION))
                 beginSession(duration)
             }
         }
@@ -165,7 +165,7 @@ class CaffeineService : LifecycleService() {
         )
 
         val remainingText = when {
-            activeDuration == DurationPreset.Infinite || remainingMillis == null -> "∞"
+            activeDuration is DurationPreset.Infinite || remainingMillis == null -> "∞"
             else -> CaffeineSession.formatCountdown(remainingMillis)
         }
 

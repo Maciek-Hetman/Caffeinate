@@ -8,11 +8,8 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -30,7 +27,6 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.ToggleButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -50,12 +46,12 @@ import com.maciejhetman.caffeinate.R
 import com.maciejhetman.caffeinate.session.CaffeineController
 import com.maciejhetman.caffeinate.session.CaffeineSession
 import com.maciejhetman.caffeinate.session.DurationPreset
+import com.maciejhetman.caffeinate.ui.components.DurationSelector
 import com.maciejhetman.caffeinate.ui.haptics.CaffeinateHaptics
 
 @OptIn(
     ExperimentalMaterial3Api::class,
     ExperimentalMaterial3ExpressiveApi::class,
-    ExperimentalLayoutApi::class,
 )
 @Composable
 fun HomeScreen(
@@ -125,37 +121,16 @@ fun HomeScreen(
 
             RemainingTimeLabel(session = session)
 
-            Text(
-                text = stringResource(R.string.duration_label),
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 8.dp),
-            )
-
-            FlowRow(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                DurationPreset.entries.forEach { preset ->
-                    val checked = selectedDuration == preset
-                    ToggleButton(
-                        checked = checked,
-                        onCheckedChange = {
-                            CaffeinateHaptics.durationSelected(haptic, context)
-                            if (isOn) {
-                                controller.start(preset)
-                            } else {
-                                controller.setLastDuration(preset)
-                            }
-                        },
-                    ) {
-                        Text(preset.label)
+            DurationSelector(
+                duration = selectedDuration,
+                onDurationChange = { duration ->
+                    if (isOn) {
+                        controller.start(duration)
+                    } else {
+                        controller.setLastDuration(duration)
                     }
-                }
-            }
+                },
+            )
 
             Spacer(modifier = Modifier.height(16.dp))
         }

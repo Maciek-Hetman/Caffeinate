@@ -31,6 +31,12 @@ object CaffeinateHaptics {
         vibratePredefined(context, VibrationEffect.EFFECT_TICK)
     }
 
+    fun sliderTick(haptic: HapticFeedback, context: Context) {
+        if (!hapticsEnabled(context)) return
+        haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
+        vibratePredefined(context, VibrationEffect.EFFECT_TICK)
+    }
+
     fun dialogOpen(haptic: HapticFeedback, context: Context) {
         if (!hapticsEnabled(context)) return
         haptic.performHapticFeedback(HapticFeedbackType.LongPress)

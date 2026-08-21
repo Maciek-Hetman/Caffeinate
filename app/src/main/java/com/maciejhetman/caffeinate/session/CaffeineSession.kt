@@ -17,7 +17,7 @@ sealed interface CaffeineSession {
     fun displayRemaining(): String = when (this) {
         Off -> "Off"
         is On -> when {
-            duration == DurationPreset.Infinite || remainingMillis == null -> "∞"
+            duration is DurationPreset.Infinite || remainingMillis == null -> "∞"
             else -> formatCountdown(remainingMillis)
         }
     }
