@@ -6,15 +6,13 @@ import androidx.glance.action.ActionParameters
 import androidx.glance.appwidget.action.ActionCallback
 import com.maciejhetman.caffeinate.session.CaffeineController
 
-class ToggleCaffeineAction : ActionCallback {
+class StartTimerCaffeineAction : ActionCallback {
     override suspend fun onAction(
         context: Context,
         glanceId: GlanceId,
         parameters: ActionParameters,
     ) {
-        // Optimistic On is published in the controller before the FGS binds; Off
-        // follows when the service ends the session and notifySurfaces refreshes.
-        CaffeineController.get(context).toggleBlocking()
-        CaffeineWidget().update(context, glanceId)
+        CaffeineController.get(context).toggleWidgetTimerBlocking()
+        TimerCaffeineWidget().update(context, glanceId)
     }
 }

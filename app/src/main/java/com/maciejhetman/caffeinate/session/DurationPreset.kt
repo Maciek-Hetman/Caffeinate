@@ -42,7 +42,7 @@ sealed class DurationPreset {
         private const val SERIAL_TIMED_PREFIX = "Timed:"
 
         val Default: DurationPreset = Infinite
-        val DefaultTimed: DurationPreset = Timed(DEFAULT_TIMER_MINUTES)
+        val DefaultTimed: Timed = Timed(DEFAULT_TIMER_MINUTES)
 
         fun formatMinutes(minutes: Int): String {
             val hours = minutes / 60

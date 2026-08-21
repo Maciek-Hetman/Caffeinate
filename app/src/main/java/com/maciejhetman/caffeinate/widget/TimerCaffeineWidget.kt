@@ -12,31 +12,47 @@ import androidx.glance.appwidget.provideContent
 import com.maciejhetman.caffeinate.R
 import com.maciejhetman.caffeinate.session.CaffeineController
 import com.maciejhetman.caffeinate.session.CaffeineSession
+import com.maciejhetman.caffeinate.session.DurationPreset
 
-class CaffeineWidget : GlanceAppWidget() {
+/**
+ * Starts a timed keep-awake session using the length configured in Settings.
+ */
+class TimerCaffeineWidget : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val controller = CaffeineController.get(context)
         provideContent {
-            // Observe inside composition — update/updateAll do not re-run provideGlance
-            // while a Glance session is already alive.
             val session by controller.session.collectAsState()
+            val timerDuration by controller.widgetTimerDuration.collectAsState(
+                initial = DurationPreset.DefaultTimed,
+            )
             GlanceTheme {
-                ToggleWidgetContent(session = session)
+                TimerWidgetContent(
+                    session = session,
+                    timerDuration = timerDuration,
+                )
             }
         }
     }
 }
 
 @Composable
-private fun ToggleWidgetContent(session: CaffeineSession) {
+private fun TimerWidgetContent(
+    session: CaffeineSession,
+    timerDuration: DurationPreset.Timed,
+) {
     val isOn = session.isActive
+    val status = if (isOn) {
+        sessionStatusLabel(session)
+    } else {
+        timerDuration.label
+    }
     CaffeinateWidgetChrome(
         isOn = isOn,
-        title = "Caffeinate",
-        status = sessionStatusLabel(session),
+        title = "Timer",
+        status = status,
         hint = if (isOn) "Tap to stop" else "Tap to start",
-        iconRes = R.drawable.ic_caffeine_notification,
-        action = actionRunCallback<ToggleCaffeineAction>(),
+        iconRes = R.drawable.ic_widget_timer,
+        action = actionRunCallback<StartTimerCaffeineAction>(),
     )
 }

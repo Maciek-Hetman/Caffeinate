@@ -5,10 +5,11 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.service.quicksettings.TileService
+import androidx.glance.appwidget.updateAll
 import com.maciejhetman.caffeinate.service.CaffeineService
 import com.maciejhetman.caffeinate.tile.CaffeineTileService
 import com.maciejhetman.caffeinate.widget.CaffeineWidget
-import androidx.glance.appwidget.updateAll
+import com.maciejhetman.caffeinate.widget.TimerCaffeineWidget
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -32,6 +33,7 @@ class CaffeineController private constructor(
     val session: StateFlow<CaffeineSession> = _session.asStateFlow()
 
     val lastDuration = prefs.lastDuration
+    val widgetTimerDuration = prefs.widgetTimerDuration
 
     fun start(duration: DurationPreset) {
         scope.launch { startInternal(duration) }
@@ -53,6 +55,17 @@ class CaffeineController private constructor(
         runBlocking { toggleInternal() }
     }
 
+    /** Start/stop using the timer-widget duration from settings. */
+    fun toggleWidgetTimerBlocking() {
+        runBlocking {
+            if (_session.value.isActive) {
+                stop()
+            } else {
+                startInternal(prefs.getWidgetTimerDurationOnce())
+            }
+        }
+    }
+
     fun startWithLastDuration() {
         scope.launch {
             startInternal(prefs.getLastDurationOnce())
@@ -62,6 +75,13 @@ class CaffeineController private constructor(
     fun setLastDuration(duration: DurationPreset) {
         scope.launch {
             prefs.setLastDuration(duration)
+        }
+    }
+
+    fun setWidgetTimerDuration(duration: DurationPreset.Timed) {
+        scope.launch {
+            prefs.setWidgetTimerDuration(duration)
+            runCatching { TimerCaffeineWidget().updateAll(appContext) }
         }
     }
 
@@ -75,6 +95,14 @@ class CaffeineController private constructor(
 
     private suspend fun startInternal(duration: DurationPreset) {
         prefs.setLastDuration(duration)
+        // Optimistic On so surfaces update before the foreground service binds.
+        publishSession(
+            CaffeineSession.On(
+                duration = duration,
+                remainingMillis = duration.millis,
+                endsAtEpochMillis = duration.millis?.let { System.currentTimeMillis() + it },
+            ),
+        )
         val intent = Intent(appContext, CaffeineService::class.java).apply {
             action = CaffeineService.ACTION_START
             putExtra(CaffeineService.EXTRA_DURATION, duration.serialize())
@@ -92,6 +120,7 @@ class CaffeineController private constructor(
         val activeChanged = previous.isActive != session.isActive
         // Tile collects while listening; only rebind / refresh widgets when on↔off flips.
         // Per-second countdown ticks must not hammer requestListeningState (breaks tile UI).
+        // While a Glance composition is alive, collectAsState still picks up ticks.
         if (activeChanged) {
             notifySurfaces()
         }
@@ -103,9 +132,8 @@ class CaffeineController private constructor(
             ComponentName(appContext, CaffeineTileService::class.java),
         )
         scope.launch(Dispatchers.IO) {
-            runCatching {
-                CaffeineWidget().updateAll(appContext)
-            }
+            runCatching { CaffeineWidget().updateAll(appContext) }
+            runCatching { TimerCaffeineWidget().updateAll(appContext) }
         }
     }
 
