@@ -1,11 +1,16 @@
 package com.maciejhetman.caffeinate.navigation
 
+import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
@@ -19,47 +24,90 @@ import com.maciejhetman.caffeinate.ui.settings.SettingsScreen
 data object HomeKey : NavKey
 data object SettingsKey : NavKey
 
+/** Material emphasized easing used by Google system predictive back. */
+private val EmphasizedEasing = CubicBezierEasing(0.2f, 0.0f, 0.0f, 1.0f)
+private const val NavDurationMs = 450
+
 @Composable
 fun CaffeinateNavHost(modifier: Modifier = Modifier) {
     val backStack = remember { mutableStateListOf<NavKey>(HomeKey) }
 
-    NavDisplay(
-        backStack = backStack,
-        onBack = { backStack.removeLastOrNull() },
-        modifier = modifier,
-        transitionSpec = {
-            (fadeIn(animationSpec = tween(300)) +
-                slideInHorizontally(animationSpec = tween(300)) { it / 4 }) togetherWith
-                (fadeOut(animationSpec = tween(200)) +
-                    slideOutHorizontally(animationSpec = tween(300)) { -it / 8 })
-        },
-        popTransitionSpec = {
-            (fadeIn(animationSpec = tween(300)) +
-                slideInHorizontally(animationSpec = tween(300)) { -it / 8 }) togetherWith
-                (fadeOut(animationSpec = tween(200)) +
-                    slideOutHorizontally(animationSpec = tween(300)) { it / 4 })
-        },
-        predictivePopTransitionSpec = {
-            (fadeIn(animationSpec = tween(300)) +
-                slideInHorizontally(animationSpec = tween(300)) { -it / 8 }) togetherWith
-                (fadeOut(animationSpec = tween(200)) +
-                    slideOutHorizontally(animationSpec = tween(300)) { it / 4 })
-        },
-        entryProvider = entryProvider {
-            entry<HomeKey> {
-                HomeScreen(
-                    onOpenSettings = {
-                        if (backStack.lastOrNull() != SettingsKey) {
-                            backStack.add(SettingsKey)
-                        }
-                    },
-                )
-            }
-            entry<SettingsKey> {
-                SettingsScreen(
-                    onBack = { backStack.removeLastOrNull() },
-                )
-            }
-        },
-    )
+    // Opaque surface under NavDisplay so fades never reveal the white window.
+    Surface(
+        modifier = modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background,
+    ) {
+        NavDisplay(
+            backStack = backStack,
+            onBack = { backStack.removeLastOrNull() },
+            modifier = Modifier.fillMaxSize(),
+            transitionSpec = {
+                (
+                    slideInHorizontally(
+                        animationSpec = tween(NavDurationMs, easing = EmphasizedEasing),
+                    ) { it } +
+                        fadeIn(animationSpec = tween(NavDurationMs / 2, delayMillis = 45))
+                    ) togetherWith (
+                    slideOutHorizontally(
+                        animationSpec = tween(NavDurationMs, easing = EmphasizedEasing),
+                    ) { -it / 4 } +
+                        fadeOut(animationSpec = tween(90))
+                    )
+            },
+            popTransitionSpec = {
+                (
+                    slideInHorizontally(
+                        animationSpec = tween(NavDurationMs, easing = EmphasizedEasing),
+                    ) { -it / 4 } +
+                        fadeIn(animationSpec = tween(NavDurationMs / 2, delayMillis = 45))
+                    ) togetherWith (
+                    slideOutHorizontally(
+                        animationSpec = tween(NavDurationMs, easing = EmphasizedEasing),
+                    ) { it } +
+                        fadeOut(animationSpec = tween(90))
+                    )
+            },
+            // Predictive back: underlying screen scales up from behind; current follows the gesture.
+            predictivePopTransitionSpec = {
+                (
+                    scaleIn(
+                        initialScale = 0.92f,
+                        animationSpec = tween(NavDurationMs, easing = EmphasizedEasing),
+                    ) +
+                        fadeIn(animationSpec = tween(NavDurationMs / 3))
+                    ) togetherWith (
+                    slideOutHorizontally(
+                        animationSpec = tween(NavDurationMs, easing = EmphasizedEasing),
+                    ) { full -> (full * 0.15f).toInt() } +
+                        fadeOut(animationSpec = tween(NavDurationMs / 2))
+                    )
+            },
+            entryProvider = entryProvider {
+                entry<HomeKey> {
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = MaterialTheme.colorScheme.background,
+                    ) {
+                        HomeScreen(
+                            onOpenSettings = {
+                                if (backStack.lastOrNull() != SettingsKey) {
+                                    backStack.add(SettingsKey)
+                                }
+                            },
+                        )
+                    }
+                }
+                entry<SettingsKey> {
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = MaterialTheme.colorScheme.background,
+                    ) {
+                        SettingsScreen(
+                            onBack = { backStack.removeLastOrNull() },
+                        )
+                    }
+                }
+            },
+        )
+    }
 }
