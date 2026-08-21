@@ -40,6 +40,8 @@ import kotlin.math.roundToInt
 /**
  * Infinite ↔ Timer mode switch with a minute slider when Timer is selected.
  * Slider commits on release so dragging does not spam session restarts.
+ *
+ * Set [timerOnly] to hide Infinite and always show the length slider (e.g. settings).
  */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -48,11 +50,12 @@ fun DurationSelector(
     onDurationChange: (DurationPreset) -> Unit,
     modifier: Modifier = Modifier,
     animateTimerReveal: Boolean = true,
+    timerOnly: Boolean = false,
 ) {
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
 
-    val isTimed = duration.isTimed
+    val isTimed = timerOnly || duration.isTimed
     var sliderMinutes by remember {
         mutableIntStateOf(
             when (duration) {
@@ -76,30 +79,32 @@ fun DurationSelector(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-            SegmentedButton(
-                selected = !isTimed,
-                onClick = {
-                    if (isTimed) {
-                        CaffeinateHaptics.durationSelected(haptic, context)
-                        onDurationChange(DurationPreset.Infinite)
-                    }
-                },
-                shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
-            ) {
-                Text(stringResource(R.string.duration_mode_infinite))
-            }
-            SegmentedButton(
-                selected = isTimed,
-                onClick = {
-                    if (!isTimed) {
-                        CaffeinateHaptics.durationSelected(haptic, context)
-                        onDurationChange(DurationPreset.Timed(sliderMinutes))
-                    }
-                },
-                shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
-            ) {
-                Text(stringResource(R.string.duration_mode_timer))
+        if (!timerOnly) {
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                SegmentedButton(
+                    selected = !isTimed,
+                    onClick = {
+                        if (isTimed) {
+                            CaffeinateHaptics.durationSelected(haptic, context)
+                            onDurationChange(DurationPreset.Infinite)
+                        }
+                    },
+                    shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+                ) {
+                    Text(stringResource(R.string.duration_mode_infinite))
+                }
+                SegmentedButton(
+                    selected = isTimed,
+                    onClick = {
+                        if (!isTimed) {
+                            CaffeinateHaptics.durationSelected(haptic, context)
+                            onDurationChange(DurationPreset.Timed(sliderMinutes))
+                        }
+                    },
+                    shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+                ) {
+                    Text(stringResource(R.string.duration_mode_timer))
+                }
             }
         }
 
