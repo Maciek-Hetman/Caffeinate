@@ -38,7 +38,7 @@ import com.maciejhetman.caffeinate.ui.haptics.CaffeinateHaptics
 import kotlin.math.roundToInt
 
 /**
- * Infinite ↔ Timer mode switch with a minute slider when Timer is selected.
+ * On ↔ Timer mode switch with a minute slider when Timer is selected.
  * Slider commits on release so dragging does not spam session restarts.
  */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -47,6 +47,7 @@ fun DurationSelector(
     duration: DurationPreset,
     onDurationChange: (DurationPreset) -> Unit,
     modifier: Modifier = Modifier,
+    animateTimerReveal: Boolean = true,
 ) {
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
@@ -92,7 +93,7 @@ fun DurationSelector(
                 },
                 shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
             ) {
-                Text(stringResource(R.string.duration_mode_infinite))
+                Text(stringResource(R.string.duration_mode_on))
             }
             SegmentedButton(
                 selected = isTimed,
@@ -108,11 +109,7 @@ fun DurationSelector(
             }
         }
 
-        AnimatedVisibility(
-            visible = isTimed,
-            enter = fadeIn() + expandVertically(),
-            exit = fadeOut() + shrinkVertically(),
-        ) {
+        val timerContent = @Composable {
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -176,6 +173,18 @@ fun DurationSelector(
                     )
                 }
             }
+        }
+
+        if (animateTimerReveal) {
+            AnimatedVisibility(
+                visible = isTimed,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically(),
+            ) {
+                timerContent()
+            }
+        } else if (isTimed) {
+            timerContent()
         }
     }
 }

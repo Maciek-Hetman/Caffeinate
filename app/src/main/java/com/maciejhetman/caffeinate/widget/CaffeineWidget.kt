@@ -39,7 +39,6 @@ class CaffeineWidget : GlanceAppWidget() {
 private fun WidgetContent(session: CaffeineSession) {
     val isOn = session.isActive
     val status = session.displayRemaining()
-    val title = if (isOn) "Caffeinate" else "Caffeinate"
 
     Column(
         modifier = GlanceModifier
@@ -51,7 +50,7 @@ private fun WidgetContent(session: CaffeineSession) {
         horizontalAlignment = Alignment.Start,
     ) {
         Text(
-            text = title,
+            text = "Caffeinate",
             style = TextStyle(
                 color = GlanceTheme.colors.onSurface,
                 fontWeight = FontWeight.Medium,
@@ -62,7 +61,7 @@ private fun WidgetContent(session: CaffeineSession) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = if (isOn) "On · $status" else "Off",
+                text = status,
                 style = TextStyle(
                     color = GlanceTheme.colors.onSurface,
                     fontWeight = FontWeight.Bold,

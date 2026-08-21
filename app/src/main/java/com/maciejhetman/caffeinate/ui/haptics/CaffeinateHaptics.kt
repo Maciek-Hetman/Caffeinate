@@ -9,43 +9,48 @@ import androidx.compose.ui.hapticfeedback.HapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 
 /**
- * Pixel-like haptic patterns for toggle, chips, dialog, and session expiry.
+ * Pixel-like haptic patterns. Uses a single vibration path to avoid double-fires
+ * (Compose HapticFeedback + VibrationEffect stacking).
  */
 object CaffeinateHaptics {
 
     fun toggleOn(haptic: HapticFeedback, context: Context) {
-        if (!hapticsEnabled(context)) return
-        haptic.performHapticFeedback(HapticFeedbackType.Confirm)
-        vibratePredefined(context, VibrationEffect.EFFECT_CLICK)
+        perform(context, VibrationEffect.EFFECT_CLICK, haptic, HapticFeedbackType.Confirm)
     }
 
     fun toggleOff(haptic: HapticFeedback, context: Context) {
-        if (!hapticsEnabled(context)) return
-        haptic.performHapticFeedback(HapticFeedbackType.Reject)
-        vibratePredefined(context, VibrationEffect.EFFECT_TICK)
+        perform(context, VibrationEffect.EFFECT_TICK, haptic, HapticFeedbackType.Reject)
     }
 
     fun durationSelected(haptic: HapticFeedback, context: Context) {
-        if (!hapticsEnabled(context)) return
-        haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
-        vibratePredefined(context, VibrationEffect.EFFECT_TICK)
+        perform(context, VibrationEffect.EFFECT_TICK, haptic, HapticFeedbackType.SegmentTick)
     }
 
     fun sliderTick(haptic: HapticFeedback, context: Context) {
-        if (!hapticsEnabled(context)) return
-        haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
-        vibratePredefined(context, VibrationEffect.EFFECT_TICK)
+        perform(context, VibrationEffect.EFFECT_TICK, haptic, HapticFeedbackType.SegmentTick)
     }
 
     fun dialogOpen(haptic: HapticFeedback, context: Context) {
-        if (!hapticsEnabled(context)) return
-        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-        vibratePredefined(context, VibrationEffect.EFFECT_CLICK)
+        perform(context, VibrationEffect.EFFECT_CLICK, haptic, HapticFeedbackType.LongPress)
     }
 
     fun sessionExpired(context: Context) {
-        if (!hapticsEnabled(context)) return
         vibratePredefined(context, VibrationEffect.EFFECT_DOUBLE_CLICK)
+    }
+
+    /**
+     * Prefer platform VibrationEffect on API 29+ (Pixel-quality predefined effects).
+     * Fall back to Compose haptics only when vibration is unavailable.
+     */
+    private fun perform(
+        context: Context,
+        effectId: Int,
+        haptic: HapticFeedback,
+        fallback: HapticFeedbackType,
+    ) {
+        if (!hapticsEnabled(context)) return
+        if (vibratePredefined(context, effectId)) return
+        haptic.performHapticFeedback(fallback)
     }
 
     private fun hapticsEnabled(context: Context): Boolean {
@@ -57,13 +62,14 @@ object CaffeinateHaptics {
         }
     }
 
-    private fun vibratePredefined(context: Context, effectId: Int) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return
-        val vibrator = vibrator(context) ?: return
-        if (!vibrator.hasVibrator()) return
-        runCatching {
+    /** @return true if a vibration was successfully requested */
+    private fun vibratePredefined(context: Context, effectId: Int): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return false
+        val vibrator = vibrator(context) ?: return false
+        if (!vibrator.hasVibrator()) return false
+        return runCatching {
             vibrator.vibrate(VibrationEffect.createPredefined(effectId))
-        }
+        }.isSuccess
     }
 
     private fun vibrator(context: Context): Vibrator? {

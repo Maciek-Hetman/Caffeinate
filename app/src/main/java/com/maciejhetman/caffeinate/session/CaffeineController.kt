@@ -5,10 +5,10 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.service.quicksettings.TileService
+import androidx.glance.appwidget.updateAll
 import com.maciejhetman.caffeinate.service.CaffeineService
 import com.maciejhetman.caffeinate.tile.CaffeineTileService
 import com.maciejhetman.caffeinate.widget.CaffeineWidget
-import androidx.glance.appwidget.updateAll
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -87,18 +87,29 @@ class CaffeineController private constructor(
     }
 
     internal fun publishSession(session: CaffeineSession) {
+        val previous = _session.value
         _session.value = session
-        notifySurfaces()
+        val activeChanged = previous.isActive != session.isActive
+        // Avoid hammering QS/widgets on every countdown tick — that causes tile animation glitches.
+        notifySurfaces(forceTileRefresh = activeChanged, updateWidget = activeChanged)
+        if (!activeChanged && session.isActive) {
+            // Timed countdown: tile collects while listening; only nudge if needed when inactive.
+            // Widgets can refresh less often — skip per-second updates.
+        }
     }
 
-    private fun notifySurfaces() {
-        TileService.requestListeningState(
-            appContext,
-            ComponentName(appContext, CaffeineTileService::class.java),
-        )
-        scope.launch(Dispatchers.IO) {
-            runCatching {
-                CaffeineWidget().updateAll(appContext)
+    private fun notifySurfaces(forceTileRefresh: Boolean, updateWidget: Boolean) {
+        if (forceTileRefresh) {
+            TileService.requestListeningState(
+                appContext,
+                ComponentName(appContext, CaffeineTileService::class.java),
+            )
+        }
+        if (updateWidget) {
+            scope.launch(Dispatchers.IO) {
+                runCatching {
+                    CaffeineWidget().updateAll(appContext)
+                }
             }
         }
     }

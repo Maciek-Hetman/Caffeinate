@@ -24,7 +24,7 @@ sealed class DurationPreset {
 
     val label: String
         get() = when (this) {
-            Infinite -> "∞"
+            Infinite -> "On"
             is Timed -> formatMinutes(minutes)
         }
 

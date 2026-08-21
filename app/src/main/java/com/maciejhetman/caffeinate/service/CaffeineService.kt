@@ -61,7 +61,7 @@ class CaffeineService : LifecycleService() {
     private fun startCountdown() {
         countdownJob?.cancel()
         val endAt = endsAtElapsedRealtime ?: run {
-            // Infinite: still refresh notification periodically with ∞
+            // Infinite ("On"): refresh notification periodically without a countdown
             countdownJob = lifecycleScope.launch {
                 while (isActive) {
                     updateNotification(null)
@@ -165,7 +165,8 @@ class CaffeineService : LifecycleService() {
         )
 
         val remainingText = when {
-            activeDuration is DurationPreset.Infinite || remainingMillis == null -> "∞"
+            activeDuration is DurationPreset.Infinite || remainingMillis == null ->
+                getString(R.string.status_on)
             else -> CaffeineSession.formatCountdown(remainingMillis)
         }
 
