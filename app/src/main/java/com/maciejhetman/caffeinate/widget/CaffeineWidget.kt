@@ -14,7 +14,6 @@ import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.background
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Column
-import androidx.glance.layout.Row
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.padding
 import androidx.glance.text.FontWeight
@@ -37,10 +36,6 @@ class CaffeineWidget : GlanceAppWidget() {
 
 @Composable
 private fun WidgetContent(session: CaffeineSession) {
-    val isOn = session.isActive
-    val status = session.displayRemaining()
-    val title = if (isOn) "Caffeinate" else "Caffeinate"
-
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
@@ -51,30 +46,19 @@ private fun WidgetContent(session: CaffeineSession) {
         horizontalAlignment = Alignment.Start,
     ) {
         Text(
-            text = title,
+            text = "Caffeinate",
             style = TextStyle(
                 color = GlanceTheme.colors.onSurface,
                 fontWeight = FontWeight.Medium,
                 fontSize = 14.sp,
             ),
         )
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = if (isOn) "On · $status" else "Off",
-                style = TextStyle(
-                    color = GlanceTheme.colors.onSurface,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 22.sp,
-                ),
-            )
-        }
         Text(
-            text = if (isOn) "Tap to stop" else "Tap to start",
+            text = session.displayRemaining(),
             style = TextStyle(
-                color = GlanceTheme.colors.onSurfaceVariant,
-                fontSize = 12.sp,
+                color = GlanceTheme.colors.onSurface,
+                fontWeight = FontWeight.Bold,
+                fontSize = 22.sp,
             ),
         )
     }
