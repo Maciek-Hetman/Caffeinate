@@ -47,6 +47,7 @@ fun DurationSelector(
     duration: DurationPreset,
     onDurationChange: (DurationPreset) -> Unit,
     modifier: Modifier = Modifier,
+    animateTimerReveal: Boolean = true,
 ) {
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
@@ -110,8 +111,16 @@ fun DurationSelector(
 
         AnimatedVisibility(
             visible = isTimed,
-            enter = fadeIn() + expandVertically(),
-            exit = fadeOut() + shrinkVertically(),
+            enter = if (animateTimerReveal) {
+                fadeIn() + expandVertically()
+            } else {
+                fadeIn()
+            },
+            exit = if (animateTimerReveal) {
+                fadeOut() + shrinkVertically()
+            } else {
+                fadeOut()
+            },
         ) {
             Column(
                 modifier = Modifier.fillMaxWidth(),

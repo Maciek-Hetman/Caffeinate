@@ -13,11 +13,16 @@
     <string name="duration_timer_label">Length</string>
     <string name="duration_slider_cd">Timer length, %1$s</string>
     <string name="duration_start">Start</string>
+    <string name="duration_update">Update</string>
     <string name="status_off">Off</string>
+    <string name="status_on">On</string>
     <string name="toggle_on_cd">Stop keeping screen awake</string>
     <string name="toggle_off_cd">Keep screen awake</string>
     <string name="duration_picker_title">How long?</string>
     <string name="duration_picker_body">Pick Infinite or a timer length, then start keeping the screen on.</string>
+    <string name="duration_picker_title_active">Change duration?</string>
+    <string name="duration_picker_body_active">Pick a new length to keep the session going, or stop it.</string>
+    <string name="duration_picker_status_active">On · %1$s</string>
     <string name="notification_channel_name">Caffeine session</string>
     <string name="notification_channel_description">Shows when Caffeinate is keeping the screen awake</string>
     <string name="notification_title">Screen staying awake</string>

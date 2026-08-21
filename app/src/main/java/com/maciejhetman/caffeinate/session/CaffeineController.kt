@@ -87,8 +87,14 @@ class CaffeineController private constructor(
     }
 
     internal fun publishSession(session: CaffeineSession) {
+        val previous = _session.value
         _session.value = session
-        notifySurfaces()
+        val activeChanged = previous.isActive != session.isActive
+        // Tile collects while listening; only rebind / refresh widgets when on↔off flips.
+        // Per-second countdown ticks must not hammer requestListeningState (breaks tile UI).
+        if (activeChanged) {
+            notifySurfaces()
+        }
     }
 
     private fun notifySurfaces() {
