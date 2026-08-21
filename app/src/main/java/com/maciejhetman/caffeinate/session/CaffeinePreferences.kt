@@ -15,12 +15,12 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(na
 class CaffeinePreferences(private val context: Context) {
 
     val lastDuration: Flow<DurationPreset> = context.dataStore.data.map { prefs ->
-        DurationPreset.fromName(prefs[KEY_LAST_DURATION])
+        DurationPreset.fromSerialized(prefs[KEY_LAST_DURATION])
     }
 
     suspend fun setLastDuration(duration: DurationPreset) {
         context.dataStore.edit { prefs ->
-            prefs[KEY_LAST_DURATION] = duration.name
+            prefs[KEY_LAST_DURATION] = duration.serialize()
         }
     }
 

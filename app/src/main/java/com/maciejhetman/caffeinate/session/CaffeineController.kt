@@ -77,7 +77,7 @@ class CaffeineController private constructor(
         prefs.setLastDuration(duration)
         val intent = Intent(appContext, CaffeineService::class.java).apply {
             action = CaffeineService.ACTION_START
-            putExtra(CaffeineService.EXTRA_DURATION, duration.name)
+            putExtra(CaffeineService.EXTRA_DURATION, duration.serialize())
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             appContext.startForegroundService(intent)
