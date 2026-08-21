@@ -48,7 +48,7 @@
             android:foregroundServiceType="specialUse">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="Keep the device screen awake for a user-requested duration" />
+                android:value="@string/fgs_type_description" />
         </service>
 
         <service
