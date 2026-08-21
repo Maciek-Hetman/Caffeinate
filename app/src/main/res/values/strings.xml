@@ -1,0 +1,24 @@
+<resources>
+    <string name="app_name">Caffeinate</string>
+    <string name="tile_label">Caffeinate</string>
+    <string name="widget_label">Caffeinate</string>
+    <string name="settings">Settings</string>
+    <string name="back">Back</string>
+    <string name="cancel">Cancel</string>
+    <string name="action_stop">Stop</string>
+    <string name="home_tagline">Keep your screen awake</string>
+    <string name="duration_label">Duration</string>
+    <string name="status_off">Off</string>
+    <string name="toggle_on_cd">Stop keeping screen awake</string>
+    <string name="toggle_off_cd">Keep screen awake</string>
+    <string name="duration_picker_title">How long?</string>
+    <string name="duration_picker_body">Choose a duration and start keeping the screen on.</string>
+    <string name="notification_channel_name">Caffeine session</string>
+    <string name="notification_channel_description">Shows when Caffeinate is keeping the screen awake</string>
+    <string name="notification_title">Screen staying awake</string>
+    <string name="notification_remaining">Remaining: %1$s</string>
+    <string name="settings_notifications_title">Notifications</string>
+    <string name="settings_notifications_body">Caffeinate needs a persistent notification while a session is active so Android allows the keep-awake service to run. Allow notifications when prompted for the best experience.</string>
+    <string name="settings_about_title">About</string>
+    <string name="settings_about_body">Caffeinate keeps your screen on for a chosen duration using a foreground service and wake lock. Add the Quick Settings tile or home-screen widget for one-tap control.</string>
+</resources>
