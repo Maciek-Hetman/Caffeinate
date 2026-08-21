@@ -154,11 +154,6 @@ private fun DurationPickerContent(
             } else {
                 MaterialTheme.colorScheme.onSurface
             }
-            val onVariant = if (isActive) {
-                MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
-            } else {
-                MaterialTheme.colorScheme.onSurfaceVariant
-            }
 
             Column(
                 modifier = Modifier
@@ -167,13 +162,7 @@ private fun DurationPickerContent(
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 Text(
-                    text = stringResource(
-                        if (isActive) {
-                            R.string.duration_picker_title_active
-                        } else {
-                            R.string.duration_picker_title
-                        },
-                    ),
+                    text = stringResource(R.string.duration_picker_title),
                     style = MaterialTheme.typography.headlineSmall,
                     color = onSurface,
                 )
@@ -193,18 +182,6 @@ private fun DurationPickerContent(
                         color = onSurface,
                     )
                 }
-
-                Text(
-                    text = stringResource(
-                        if (isActive) {
-                            R.string.duration_picker_body_active
-                        } else {
-                            R.string.duration_picker_body
-                        },
-                    ),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = onVariant,
-                )
 
                 DurationSelector(
                     duration = draft,
