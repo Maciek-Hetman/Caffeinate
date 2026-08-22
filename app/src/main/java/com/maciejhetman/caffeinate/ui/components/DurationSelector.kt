@@ -20,7 +20,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -40,6 +39,8 @@ import kotlin.math.roundToInt
 /**
  * Infinite ↔ Timer mode switch with a minute slider when Timer is selected.
  * Slider commits on release so dragging does not spam session restarts.
+ *
+ * Set [timerOnly] to hide Infinite and always show the length slider (e.g. settings).
  */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -48,27 +49,26 @@ fun DurationSelector(
     onDurationChange: (DurationPreset) -> Unit,
     modifier: Modifier = Modifier,
     animateTimerReveal: Boolean = true,
+    timerOnly: Boolean = false,
 ) {
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
 
-    val isTimed = duration.isTimed
+    val isTimed = timerOnly || duration.isTimed
     var sliderMinutes by remember {
         mutableIntStateOf(
-            when (duration) {
-                is DurationPreset.Timed -> duration.minutes
-                DurationPreset.Infinite -> DurationPreset.DEFAULT_TIMER_MINUTES
-            },
+            DurationPreset.snapToSliderStep(
+                when (duration) {
+                    is DurationPreset.Timed -> duration.minutes
+                    DurationPreset.Infinite -> DurationPreset.DEFAULT_TIMER_MINUTES
+                },
+            ),
         )
-    }
-    var sliderValue by remember {
-        mutableFloatStateOf(sliderMinutes.toFloat())
     }
 
     LaunchedEffect(duration) {
         if (duration is DurationPreset.Timed) {
-            sliderMinutes = duration.minutes
-            sliderValue = duration.minutes.toFloat()
+            sliderMinutes = DurationPreset.snapToSliderStep(duration.minutes)
         }
     }
 
@@ -76,36 +76,38 @@ fun DurationSelector(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text(
-            text = stringResource(R.string.duration_label),
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        if (!timerOnly) {
+            Text(
+                text = stringResource(R.string.duration_label),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
 
-        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-            SegmentedButton(
-                selected = !isTimed,
-                onClick = {
-                    if (isTimed) {
-                        CaffeinateHaptics.durationSelected(haptic, context)
-                        onDurationChange(DurationPreset.Infinite)
-                    }
-                },
-                shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
-            ) {
-                Text(stringResource(R.string.duration_mode_infinite))
-            }
-            SegmentedButton(
-                selected = isTimed,
-                onClick = {
-                    if (!isTimed) {
-                        CaffeinateHaptics.durationSelected(haptic, context)
-                        onDurationChange(DurationPreset.Timed(sliderMinutes))
-                    }
-                },
-                shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
-            ) {
-                Text(stringResource(R.string.duration_mode_timer))
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                SegmentedButton(
+                    selected = !isTimed,
+                    onClick = {
+                        if (isTimed) {
+                            CaffeinateHaptics.durationSelected(haptic, context)
+                            onDurationChange(DurationPreset.Infinite)
+                        }
+                    },
+                    shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+                ) {
+                    Text(stringResource(R.string.duration_mode_infinite))
+                }
+                SegmentedButton(
+                    selected = isTimed,
+                    onClick = {
+                        if (!isTimed) {
+                            CaffeinateHaptics.durationSelected(haptic, context)
+                            onDurationChange(DurationPreset.Timed(sliderMinutes))
+                        }
+                    },
+                    shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+                ) {
+                    Text(stringResource(R.string.duration_mode_timer))
+                }
             }
         }
 
@@ -148,20 +150,20 @@ fun DurationSelector(
                     DurationPreset.formatMinutes(sliderMinutes),
                 )
                 Slider(
-                    value = sliderValue,
+                    value = sliderMinutes.toFloat(),
                     onValueChange = { value ->
-                        val minutes = value.roundToInt()
-                            .coerceIn(DurationPreset.MIN_MINUTES, DurationPreset.MAX_MINUTES)
-                        sliderValue = minutes.toFloat()
-                        sliderMinutes = minutes
+                        val minutes = DurationPreset.snapToSliderStep(value.roundToInt())
+                        if (minutes != sliderMinutes) {
+                            CaffeinateHaptics.sliderTick(haptic, context)
+                            sliderMinutes = minutes
+                        }
                     },
                     onValueChangeFinished = {
-                        CaffeinateHaptics.sliderTick(haptic, context)
                         onDurationChange(DurationPreset.Timed(sliderMinutes))
                     },
-                    valueRange = DurationPreset.MIN_MINUTES.toFloat()..
+                    valueRange = DurationPreset.SLIDER_MIN_MINUTES.toFloat()..
                         DurationPreset.MAX_MINUTES.toFloat(),
-                    steps = DurationPreset.MAX_MINUTES - DurationPreset.MIN_MINUTES - 1,
+                    steps = DurationPreset.SLIDER_STEPS,
                     modifier = Modifier
                         .fillMaxWidth()
                         .semantics { contentDescription = sliderCd },
@@ -174,7 +176,7 @@ fun DurationSelector(
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     Text(
-                        text = DurationPreset.formatMinutes(DurationPreset.MIN_MINUTES),
+                        text = DurationPreset.formatMinutes(DurationPreset.SLIDER_MIN_MINUTES),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

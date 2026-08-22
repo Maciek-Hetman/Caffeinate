@@ -11,7 +11,7 @@
     <string name="duration_mode_infinite">Infinite</string>
     <string name="duration_mode_timer">Timer</string>
     <string name="duration_timer_label">Length</string>
-    <string name="duration_slider_cd">Timer length, %1$s</string>
+    <string name="duration_slider_cd">Length, %1$s</string>
     <string name="duration_start">Start</string>
     <string name="duration_update">Update</string>
     <string name="status_off">Off</string>
@@ -27,6 +27,8 @@
     <string name="notification_channel_description">Shows when Caffeinate is keeping the screen awake</string>
     <string name="notification_title">Screen staying awake</string>
     <string name="notification_remaining">Remaining: %1$s</string>
+    <string name="settings_widget_timer_title">Timer widget</string>
+    <string name="settings_widget_timer_body">Default length for timer-style widgets. The Caffeinate widget uses your last duration.</string>
     <string name="settings_notifications_title">Notifications</string>
     <string name="settings_notifications_body">Caffeinate needs a persistent notification while a session is active so Android allows the keep-awake service to run. Allow notifications when prompted for the best experience.</string>
     <string name="settings_about_title">About</string>

@@ -32,6 +32,7 @@ class CaffeineController private constructor(
     val session: StateFlow<CaffeineSession> = _session.asStateFlow()
 
     val lastDuration = prefs.lastDuration
+    val widgetTimerDuration = prefs.widgetTimerDuration
 
     fun start(duration: DurationPreset) {
         scope.launch { startInternal(duration) }
@@ -62,6 +63,12 @@ class CaffeineController private constructor(
     fun setLastDuration(duration: DurationPreset) {
         scope.launch {
             prefs.setLastDuration(duration)
+        }
+    }
+
+    fun setWidgetTimerDuration(duration: DurationPreset.Timed) {
+        scope.launch {
+            prefs.setWidgetTimerDuration(duration)
         }
     }
 
