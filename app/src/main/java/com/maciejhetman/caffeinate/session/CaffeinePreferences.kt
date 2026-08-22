@@ -3,6 +3,7 @@ package com.maciejhetman.caffeinate.session
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -22,6 +23,14 @@ class CaffeinePreferences(private val context: Context) {
         prefs[KEY_WIDGET_TIMER_DURATION].toTimedOrDefault()
     }
 
+    val themeMode: Flow<ThemeMode> = context.dataStore.data.map { prefs ->
+        ThemeMode.fromSerialized(prefs[KEY_THEME_MODE])
+    }
+
+    val dynamicColorEnabled: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[KEY_DYNAMIC_COLOR] ?: true
+    }
+
     suspend fun setLastDuration(duration: DurationPreset) {
         context.dataStore.edit { prefs ->
             prefs[KEY_LAST_DURATION] = duration.serialize()
@@ -34,6 +43,18 @@ class CaffeinePreferences(private val context: Context) {
         }
     }
 
+    suspend fun setThemeMode(mode: ThemeMode) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_THEME_MODE] = mode.serialize()
+        }
+    }
+
+    suspend fun setDynamicColorEnabled(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_DYNAMIC_COLOR] = enabled
+        }
+    }
+
     suspend fun getLastDurationOnce(): DurationPreset = lastDuration.first()
 
     suspend fun getWidgetTimerDurationOnce(): DurationPreset.Timed = widgetTimerDuration.first()
@@ -41,6 +62,8 @@ class CaffeinePreferences(private val context: Context) {
     companion object {
         private val KEY_LAST_DURATION = stringPreferencesKey("last_duration")
         private val KEY_WIDGET_TIMER_DURATION = stringPreferencesKey("widget_timer_duration")
+        private val KEY_THEME_MODE = stringPreferencesKey("theme_mode")
+        private val KEY_DYNAMIC_COLOR = booleanPreferencesKey("dynamic_color_enabled")
 
         private fun String?.toTimedOrDefault(): DurationPreset.Timed {
             if (this == null) return DurationPreset.DefaultTimed

@@ -24,5 +24,10 @@
     <string name="notification_channel_description">Shown while the screen is kept awake</string>
     <string name="notification_remaining">%1$s left</string>
     <string name="settings_widget_timer_title">Timer widget</string>
+    <string name="settings_theme_title">Theme</string>
+    <string name="theme_mode_system">System</string>
+    <string name="theme_mode_light">Light</string>
+    <string name="theme_mode_dark">Dark</string>
+    <string name="settings_dynamic_color_title">Material You</string>
     <string name="fgs_type_description">Keep the screen awake</string>
 </resources>

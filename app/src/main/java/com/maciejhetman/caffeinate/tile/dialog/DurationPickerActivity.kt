@@ -39,6 +39,7 @@ import com.maciejhetman.caffeinate.R
 import com.maciejhetman.caffeinate.session.CaffeineController
 import com.maciejhetman.caffeinate.session.CaffeineSession
 import com.maciejhetman.caffeinate.session.DurationPreset
+import com.maciejhetman.caffeinate.session.ThemeMode
 import com.maciejhetman.caffeinate.ui.components.DurationSelector
 import com.maciejhetman.caffeinate.ui.haptics.CaffeinateHaptics
 import com.maciejhetman.caffeinate.ui.theme.CaffeinateTheme
@@ -55,7 +56,14 @@ class DurationPickerActivity : ComponentActivity() {
         suppressSystemTransitions()
         window.setBackgroundDrawable(ColorDrawable(AndroidColor.TRANSPARENT))
         setContent {
-            CaffeinateTheme {
+            val controller = CaffeineController.get(this)
+            val themeMode by controller.themeMode.collectAsStateWithLifecycle(
+                initialValue = ThemeMode.System,
+            )
+            val dynamicColor by controller.dynamicColorEnabled.collectAsStateWithLifecycle(
+                initialValue = true,
+            )
+            CaffeinateTheme(themeMode = themeMode, dynamicColor = dynamicColor) {
                 DurationPickerContent(
                     onDismiss = { finish() },
                     onConfirm = { duration ->

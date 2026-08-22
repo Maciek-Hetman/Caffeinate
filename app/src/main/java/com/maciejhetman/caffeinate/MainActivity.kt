@@ -9,9 +9,13 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.maciejhetman.caffeinate.navigation.CaffeinateNavHost
+import com.maciejhetman.caffeinate.session.CaffeineController
+import com.maciejhetman.caffeinate.session.ThemeMode
 import com.maciejhetman.caffeinate.ui.theme.CaffeinateTheme
 
 class MainActivity : ComponentActivity() {
@@ -25,7 +29,14 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         maybeRequestNotificationPermission()
         setContent {
-            CaffeinateTheme {
+            val controller = CaffeineController.get(this)
+            val themeMode by controller.themeMode.collectAsStateWithLifecycle(
+                initialValue = ThemeMode.System,
+            )
+            val dynamicColor by controller.dynamicColorEnabled.collectAsStateWithLifecycle(
+                initialValue = true,
+            )
+            CaffeinateTheme(themeMode = themeMode, dynamicColor = dynamicColor) {
                 CaffeinateNavHost(modifier = Modifier.fillMaxSize())
             }
         }
