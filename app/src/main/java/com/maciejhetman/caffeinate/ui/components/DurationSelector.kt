@@ -20,7 +20,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -58,20 +57,18 @@ fun DurationSelector(
     val isTimed = timerOnly || duration.isTimed
     var sliderMinutes by remember {
         mutableIntStateOf(
-            when (duration) {
-                is DurationPreset.Timed -> duration.minutes
-                DurationPreset.Infinite -> DurationPreset.DEFAULT_TIMER_MINUTES
-            },
+            DurationPreset.snapToSliderStep(
+                when (duration) {
+                    is DurationPreset.Timed -> duration.minutes
+                    DurationPreset.Infinite -> DurationPreset.DEFAULT_TIMER_MINUTES
+                },
+            ),
         )
-    }
-    var sliderValue by remember {
-        mutableFloatStateOf(sliderMinutes.toFloat())
     }
 
     LaunchedEffect(duration) {
         if (duration is DurationPreset.Timed) {
-            sliderMinutes = duration.minutes
-            sliderValue = duration.minutes.toFloat()
+            sliderMinutes = DurationPreset.snapToSliderStep(duration.minutes)
         }
     }
 
@@ -137,20 +134,20 @@ fun DurationSelector(
                     DurationPreset.formatMinutes(sliderMinutes),
                 )
                 Slider(
-                    value = sliderValue,
+                    value = sliderMinutes.toFloat(),
                     onValueChange = { value ->
-                        val minutes = value.roundToInt()
-                            .coerceIn(DurationPreset.MIN_MINUTES, DurationPreset.MAX_MINUTES)
-                        sliderValue = minutes.toFloat()
-                        sliderMinutes = minutes
+                        val minutes = DurationPreset.snapToSliderStep(value.roundToInt())
+                        if (minutes != sliderMinutes) {
+                            CaffeinateHaptics.sliderTick(haptic, context)
+                            sliderMinutes = minutes
+                        }
                     },
                     onValueChangeFinished = {
-                        CaffeinateHaptics.sliderTick(haptic, context)
                         onDurationChange(DurationPreset.Timed(sliderMinutes))
                     },
-                    valueRange = DurationPreset.MIN_MINUTES.toFloat()..
+                    valueRange = DurationPreset.SLIDER_MIN_MINUTES.toFloat()..
                         DurationPreset.MAX_MINUTES.toFloat(),
-                    steps = DurationPreset.MAX_MINUTES - DurationPreset.MIN_MINUTES - 1,
+                    steps = DurationPreset.SLIDER_STEPS,
                     modifier = Modifier
                         .fillMaxWidth()
                         .semantics { contentDescription = sliderCd },
@@ -163,7 +160,7 @@ fun DurationSelector(
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     Text(
-                        text = DurationPreset.formatMinutes(DurationPreset.MIN_MINUTES),
+                        text = DurationPreset.formatMinutes(DurationPreset.SLIDER_MIN_MINUTES),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

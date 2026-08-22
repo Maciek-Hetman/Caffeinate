@@ -1,5 +1,7 @@
 package com.maciejhetman.caffeinate.session
 
+import kotlin.math.roundToInt
+
 /**
  * Keep-awake duration: infinite or a timed length in whole minutes.
  */
@@ -37,6 +39,22 @@ sealed class DurationPreset {
         const val MIN_MINUTES = 1
         const val MAX_MINUTES = 240 // 4 hours
         const val DEFAULT_TIMER_MINUTES = 30
+
+        /** Discrete step size for duration sliders (matches Pixel-style stepped sliders). */
+        const val SLIDER_STEP_MINUTES = 5
+
+        /** Smallest value shown on the duration slider; aligned to [SLIDER_STEP_MINUTES]. */
+        const val SLIDER_MIN_MINUTES = SLIDER_STEP_MINUTES
+
+        /** Material3 `steps` count for the duration slider range. */
+        val SLIDER_STEPS: Int = 0 // continuous track; snap via [snapToSliderStep]
+
+        /** Snaps [minutes] to the nearest slider step within the allowed range. */
+        fun snapToSliderStep(minutes: Int): Int {
+            val step = SLIDER_STEP_MINUTES
+            val snapped = ((minutes.toFloat() / step).roundToInt() * step)
+            return snapped.coerceIn(SLIDER_MIN_MINUTES, MAX_MINUTES)
+        }
 
         const val SERIAL_INFINITE = "Infinite"
         private const val SERIAL_TIMED_PREFIX = "Timed:"
