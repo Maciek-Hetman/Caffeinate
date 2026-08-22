@@ -43,12 +43,10 @@ class CaffeinePreferences(private val context: Context) {
         private val KEY_WIDGET_TIMER_DURATION = stringPreferencesKey("widget_timer_duration")
 
         private fun String?.toTimedOrDefault(): DurationPreset.Timed {
-            if (this == null) {
-                return DurationPreset.Timed(DurationPreset.DEFAULT_TIMER_MINUTES)
-            }
+            if (this == null) return DurationPreset.DefaultTimed
             return when (val parsed = DurationPreset.fromSerialized(this)) {
                 is DurationPreset.Timed -> parsed
-                DurationPreset.Infinite -> DurationPreset.Timed(DurationPreset.DEFAULT_TIMER_MINUTES)
+                DurationPreset.Infinite -> DurationPreset.DefaultTimed
             }
         }
     }
