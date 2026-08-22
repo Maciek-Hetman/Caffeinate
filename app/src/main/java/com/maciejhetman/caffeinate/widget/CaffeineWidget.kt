@@ -12,6 +12,7 @@ import androidx.glance.appwidget.provideContent
 import com.maciejhetman.caffeinate.R
 import com.maciejhetman.caffeinate.session.CaffeineController
 import com.maciejhetman.caffeinate.session.CaffeineSession
+import com.maciejhetman.caffeinate.session.DurationPreset
 
 class CaffeineWidget : GlanceAppWidget() {
 
@@ -30,12 +31,15 @@ class CaffeineWidget : GlanceAppWidget() {
 
 @Composable
 private fun ToggleWidgetContent(session: CaffeineSession) {
-    val isOn = session.isActive
+    // This widget represents the infinite session. When a timed session is running instead
+    // (e.g. started from the Timer widget), it shows as inactive with an option to switch.
+    val isInfiniteActive = isSessionModeActive(session, timed = false)
+    val isTimedActive = isSessionModeActive(session, timed = true)
     CaffeinateWidgetChrome(
-        isOn = isOn,
+        isOn = isInfiniteActive,
         title = "Caffeinate",
-        status = sessionStatusLabel(session),
-        hint = if (isOn) "Tap to stop" else "Tap to start",
+        status = if (isInfiniteActive) "On" else DurationPreset.Infinite.label,
+        hint = widgetHint(isInfiniteActive, isTimedActive, switchToLabel = "infinite"),
         iconRes = R.drawable.ic_caffeine_notification,
         action = actionRunCallback<ToggleCaffeineAction>(),
     )

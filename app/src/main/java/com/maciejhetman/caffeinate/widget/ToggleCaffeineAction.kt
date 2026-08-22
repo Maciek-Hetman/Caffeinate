@@ -14,7 +14,7 @@ class ToggleCaffeineAction : ActionCallback {
     ) {
         // Optimistic On is published in the controller before the FGS binds; Off
         // follows when the service ends the session and notifySurfaces refreshes.
-        CaffeineController.get(context).toggleBlocking()
+        CaffeineController.get(context).toggleInfiniteBlocking()
         CaffeineWidget().update(context, glanceId)
     }
 }

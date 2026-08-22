@@ -41,17 +41,20 @@ private fun TimerWidgetContent(
     session: CaffeineSession,
     timerDuration: DurationPreset.Timed,
 ) {
-    val isOn = session.isActive
-    val status = if (isOn) {
+    // This widget represents a timed session. When an infinite session is running instead
+    // (e.g. started from the Caffeinate widget), it shows as inactive with an option to switch.
+    val isTimedActive = isSessionModeActive(session, timed = true)
+    val isInfiniteActive = isSessionModeActive(session, timed = false)
+    val status = if (isTimedActive) {
         sessionStatusLabel(session)
     } else {
         timerDuration.label
     }
     CaffeinateWidgetChrome(
-        isOn = isOn,
+        isOn = isTimedActive,
         title = "Timer",
         status = status,
-        hint = if (isOn) "Tap to stop" else "Tap to start",
+        hint = widgetHint(isTimedActive, isInfiniteActive, switchToLabel = "timer"),
         iconRes = R.drawable.ic_widget_timer,
         action = actionRunCallback<StartTimerCaffeineAction>(),
     )

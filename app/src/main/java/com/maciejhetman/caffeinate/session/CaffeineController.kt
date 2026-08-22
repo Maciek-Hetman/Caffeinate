@@ -55,10 +55,33 @@ class CaffeineController private constructor(
         runBlocking { toggleInternal() }
     }
 
-    /** Start/stop using the timer-widget duration from settings. */
+    /**
+     * Blocking helper for the Caffeinate (infinite) widget tap.
+     * - Off -> starts an infinite session.
+     * - Infinite session running -> stops it.
+     * - Timed session running -> switches it to infinite without stopping.
+     */
+    fun toggleInfiniteBlocking() {
+        runBlocking {
+            val current = _session.value
+            if (current is CaffeineSession.On && current.duration is DurationPreset.Infinite) {
+                stop()
+            } else {
+                startInternal(DurationPreset.Infinite)
+            }
+        }
+    }
+
+    /**
+     * Blocking helper for the Timer widget tap, using the timer-widget duration from settings.
+     * - Off -> starts a timed session.
+     * - Timed session running -> stops it.
+     * - Infinite session running -> switches it to timed without stopping.
+     */
     fun toggleWidgetTimerBlocking() {
         runBlocking {
-            if (_session.value.isActive) {
+            val current = _session.value
+            if (current is CaffeineSession.On && current.duration.isTimed) {
                 stop()
             } else {
                 startInternal(prefs.getWidgetTimerDurationOnce())

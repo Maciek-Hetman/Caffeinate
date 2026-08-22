@@ -130,3 +130,19 @@ internal fun sessionStatusLabel(session: CaffeineSession): String = when (val s 
         else -> CaffeineSession.formatCountdown(s.remainingMillis)
     }
 }
+
+/** Whether the running session (if any) matches a widget's own mode (timed vs infinite). */
+internal fun isSessionModeActive(session: CaffeineSession, timed: Boolean): Boolean =
+    session is CaffeineSession.On && session.duration.isTimed == timed
+
+/**
+ * Hint text for a widget whose own mode may differ from the currently running session:
+ * - own mode active -> offer to stop
+ * - the other mode is running -> offer to switch modes instead of stopping
+ * - nothing running -> offer to start
+ */
+internal fun widgetHint(isOwnModeActive: Boolean, isOtherModeActive: Boolean, switchToLabel: String): String = when {
+    isOwnModeActive -> "Tap to stop"
+    isOtherModeActive -> "Tap to switch to $switchToLabel"
+    else -> "Tap to start"
+}
