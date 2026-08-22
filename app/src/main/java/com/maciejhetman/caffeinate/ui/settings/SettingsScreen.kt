@@ -67,11 +67,6 @@ fun SettingsScreen(
                 text = stringResource(R.string.settings_widget_timer_title),
                 style = MaterialTheme.typography.titleMedium,
             )
-            Text(
-                text = stringResource(R.string.settings_widget_timer_body),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
             DurationSelector(
                 duration = widgetTimerDuration,
                 onDurationChange = { duration ->
@@ -81,25 +76,6 @@ fun SettingsScreen(
                 },
                 timerOnly = true,
                 animateTimerReveal = false,
-            )
-
-            Text(
-                text = stringResource(R.string.settings_notifications_title),
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Text(
-                text = stringResource(R.string.settings_notifications_body),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                text = stringResource(R.string.settings_about_title),
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Text(
-                text = stringResource(R.string.settings_about_body),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }

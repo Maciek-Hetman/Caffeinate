@@ -48,7 +48,7 @@ class CaffeineTileService : TileService() {
         // Optimistic UI so the tile flips immediately while the service starts.
         qsTile?.let { tile ->
             tile.state = if (turningOn) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
-            tile.label = getString(R.string.tile_label)
+            tile.label = getString(R.string.app_name)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 tile.subtitle = getString(
                     if (turningOn) R.string.status_on else R.string.status_off,
@@ -79,7 +79,7 @@ class CaffeineTileService : TileService() {
         if (stateChanged) {
             tile.state = newState
         }
-        tile.label = getString(R.string.tile_label)
+        tile.label = getString(R.string.app_name)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             tile.subtitle = newSubtitle
         }

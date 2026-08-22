@@ -150,17 +150,12 @@ class CaffeineService : LifecycleService() {
         nm.notify(NOTIFICATION_ID, buildNotification(remainingMillis))
     }
 
+    /** Minimal, low-priority notification — required by Android to keep the foreground service alive. */
     private fun buildNotification(remainingMillis: Long?): Notification {
         val openApp = PendingIntent.getActivity(
             this,
             0,
             Intent(this, MainActivity::class.java),
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-        )
-        val stopIntent = PendingIntent.getService(
-            this,
-            1,
-            Intent(this, CaffeineService::class.java).setAction(ACTION_STOP),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
@@ -171,13 +166,11 @@ class CaffeineService : LifecycleService() {
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_caffeine_notification)
-            .setContentTitle(getString(R.string.notification_title))
             .setContentText(getString(R.string.notification_remaining, remainingText))
             .setContentIntent(openApp)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
-            .setCategory(NotificationCompat.CATEGORY_SERVICE)
-            .addAction(0, getString(R.string.action_stop), stopIntent)
+            .setSilent(true)
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
             .build()
     }
@@ -188,7 +181,7 @@ class CaffeineService : LifecycleService() {
         val channel = NotificationChannel(
             CHANNEL_ID,
             getString(R.string.notification_channel_name),
-            NotificationManager.IMPORTANCE_LOW,
+            NotificationManager.IMPORTANCE_MIN,
         ).apply {
             description = getString(R.string.notification_channel_description)
             setShowBadge(false)

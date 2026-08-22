@@ -1,7 +1,5 @@
 <resources>
     <string name="app_name">Caffeinate</string>
-    <string name="tile_label">Caffeinate</string>
-    <string name="widget_label">Caffeinate</string>
     <string name="widget_label_description">Toggle keep-awake with your last duration</string>
     <string name="widget_timer_label">Timer</string>
     <string name="widget_timer_description">Start a timed keep-awake session</string>
@@ -24,13 +22,7 @@
     <string name="duration_picker_status_active">On · %1$s</string>
     <string name="notification_channel_name">Session</string>
     <string name="notification_channel_description">Shown while the screen is kept awake</string>
-    <string name="notification_title">Screen awake</string>
     <string name="notification_remaining">%1$s left</string>
     <string name="settings_widget_timer_title">Timer widget</string>
-    <string name="settings_widget_timer_body">Length for the Timer home-screen widget. The Caffeinate widget uses your last duration.</string>
-    <string name="settings_notifications_title">Notifications</string>
-    <string name="settings_notifications_body">Required while a session is running.</string>
-    <string name="settings_about_title">About</string>
-    <string name="settings_about_body">Keeps the screen on. Add the Quick Settings tile or widgets for one-tap control.</string>
     <string name="fgs_type_description">Keep the screen awake</string>
 </resources>

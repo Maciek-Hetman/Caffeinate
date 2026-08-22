@@ -12,7 +12,6 @@ import androidx.glance.appwidget.provideContent
 import com.maciejhetman.caffeinate.R
 import com.maciejhetman.caffeinate.session.CaffeineController
 import com.maciejhetman.caffeinate.session.CaffeineSession
-import com.maciejhetman.caffeinate.session.DurationPreset
 
 class CaffeineWidget : GlanceAppWidget() {
 
@@ -38,7 +37,7 @@ private fun ToggleWidgetContent(session: CaffeineSession) {
     CaffeinateWidgetChrome(
         isOn = isInfiniteActive,
         title = "Caffeinate",
-        status = if (isInfiniteActive) "On" else DurationPreset.Infinite.label,
+        status = if (isInfiniteActive) "On" else "Off",
         hint = widgetHint(isInfiniteActive, isTimedActive, switchToLabel = "infinite"),
         iconRes = R.drawable.ic_caffeine_notification,
         action = actionRunCallback<ToggleCaffeineAction>(),
