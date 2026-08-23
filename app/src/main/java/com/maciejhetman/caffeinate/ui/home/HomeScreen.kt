@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -29,7 +28,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -51,6 +49,7 @@ import com.maciejhetman.caffeinate.R
 import com.maciejhetman.caffeinate.session.CaffeineController
 import com.maciejhetman.caffeinate.session.CaffeineSession
 import com.maciejhetman.caffeinate.session.DurationPreset
+import com.maciejhetman.caffeinate.ui.components.AppCard
 import com.maciejhetman.caffeinate.ui.components.DurationSelector
 import com.maciejhetman.caffeinate.ui.haptics.CaffeinateHaptics
 import java.text.DateFormat
@@ -129,11 +128,7 @@ fun HomeScreen(
 
             SessionStatus(session = session)
 
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.large,
-                color = MaterialTheme.colorScheme.surfaceContainerLow,
-            ) {
+            AppCard {
                 DurationSelector(
                     duration = selectedDuration,
                     onDurationChange = { duration ->
@@ -143,7 +138,6 @@ fun HomeScreen(
                             controller.setLastDuration(duration)
                         }
                     },
-                    modifier = Modifier.padding(16.dp),
                 )
             }
 

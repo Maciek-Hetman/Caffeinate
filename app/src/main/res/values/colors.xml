@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Matches SurfaceWhite; used before Compose paints (cold start / transition gaps). -->
-    <color name="caffeinate_window_background">#FFFAFAFA</color>
+    <!-- Matches page background (SurfaceContainerLowestLight). -->
+    <color name="caffeinate_window_background">#FFE8EAED</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
 </resources>
