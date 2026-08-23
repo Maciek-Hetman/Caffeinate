@@ -87,7 +87,9 @@ fun CaffeinateTheme(
             val window = (view.context as? Activity)?.window ?: return@SideEffect
             // Keep decorView in sync so any gap under Compose isn't pure white.
             window.decorView.setBackgroundColor(colorScheme.background.toArgb())
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
+            val insetsController = WindowCompat.getInsetsController(window, view)
+            insetsController.isAppearanceLightStatusBars = !darkTheme
+            insetsController.isAppearanceLightNavigationBars = !darkTheme
         }
     }
 

@@ -1,9 +1,9 @@
 package com.maciejhetman.caffeinate.ui.settings
 
 import android.os.Build
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -11,9 +11,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
@@ -25,10 +28,12 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.maciejhetman.caffeinate.R
@@ -84,79 +89,106 @@ fun SettingsScreen(
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
                 .padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Text(
-                text = stringResource(R.string.settings_theme_title),
-                style = MaterialTheme.typography.titleMedium,
-            )
-            ThemeModeSelector(
-                themeMode = themeMode,
-                onThemeModeChange = { controller.setThemeMode(it) },
-            )
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = stringResource(R.string.settings_dynamic_color_title),
-                        style = MaterialTheme.typography.bodyLarge,
-                    )
-                    Switch(
+            SettingsSection(title = stringResource(R.string.settings_theme_title)) {
+                ThemeModeSelector(
+                    themeMode = themeMode,
+                    onThemeModeChange = { controller.setThemeMode(it) },
+                )
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    SettingsSwitchRow(
+                        title = stringResource(R.string.settings_dynamic_color_title),
                         checked = dynamicColorEnabled,
                         onCheckedChange = { controller.setDynamicColorEnabled(it) },
                     )
                 }
             }
 
-            Text(
-                text = stringResource(R.string.settings_session_title),
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(end = 16.dp),
-                ) {
-                    Text(
-                        text = stringResource(R.string.settings_stop_on_screen_off_title),
-                        style = MaterialTheme.typography.bodyLarge,
-                    )
-                    Text(
-                        text = stringResource(R.string.settings_stop_on_screen_off_summary),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                Switch(
+            SettingsSection(title = stringResource(R.string.settings_session_title)) {
+                SettingsSwitchRow(
+                    title = stringResource(R.string.settings_stop_on_screen_off_title),
+                    summary = stringResource(R.string.settings_stop_on_screen_off_summary),
                     checked = stopOnScreenOff,
                     onCheckedChange = { controller.setStopOnScreenOff(it) },
                 )
             }
 
-            Text(
-                text = stringResource(R.string.settings_widget_timer_title),
-                style = MaterialTheme.typography.titleMedium,
-            )
-            DurationSelector(
-                duration = widgetTimerDuration,
-                onDurationChange = { duration ->
-                    if (duration is DurationPreset.Timed) {
-                        controller.setWidgetTimerDuration(duration)
-                    }
-                },
-                timerOnly = true,
-                animateTimerReveal = false,
-            )
+            SettingsSection(title = stringResource(R.string.settings_widget_timer_title)) {
+                Text(
+                    text = stringResource(R.string.settings_widget_timer_summary),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 4.dp),
+                )
+                DurationSelector(
+                    duration = widgetTimerDuration,
+                    onDurationChange = { duration ->
+                        if (duration is DurationPreset.Timed) {
+                            controller.setWidgetTimerDuration(duration)
+                        }
+                    },
+                    timerOnly = true,
+                    animateTimerReveal = false,
+                )
+            }
         }
     }
+}
+
+@Composable
+private fun SettingsSection(
+    title: String,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
+    Column(modifier = modifier.fillMaxWidth()) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(start = 4.dp, bottom = 8.dp),
+        )
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+            ),
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                content()
+            }
+        }
+    }
+}
+
+@Composable
+private fun SettingsSwitchRow(
+    title: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+    summary: String? = null,
+) {
+    ListItem(
+        headlineContent = { Text(title) },
+        supportingContent = summary?.let { { Text(it) } },
+        trailingContent = {
+            Switch(
+                checked = checked,
+                onCheckedChange = null,
+            )
+        },
+        modifier = modifier
+            .fillMaxWidth()
+            .semantics { role = Role.Switch }
+            .clickable { onCheckedChange(!checked) },
+    )
 }
 
 @Composable

@@ -10,10 +10,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Coffee
 import androidx.compose.material.icons.filled.Settings
@@ -26,11 +29,13 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
@@ -48,6 +53,14 @@ import com.maciejhetman.caffeinate.session.CaffeineSession
 import com.maciejhetman.caffeinate.session.DurationPreset
 import com.maciejhetman.caffeinate.ui.components.DurationSelector
 import com.maciejhetman.caffeinate.ui.haptics.CaffeinateHaptics
+import java.text.DateFormat
+import java.util.Date
+
+private enum class SessionStatusKind {
+    Off,
+    InfiniteOn,
+    TimedOn,
+}
 
 @OptIn(
     ExperimentalMaterial3Api::class,
@@ -96,7 +109,8 @@ fun HomeScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(horizontal = 24.dp),
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 24.dp, vertical = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(24.dp, Alignment.CenterVertically),
         ) {
@@ -113,18 +127,25 @@ fun HomeScreen(
                 },
             )
 
-            RemainingTimeLabel(session = session)
+            SessionStatus(session = session)
 
-            DurationSelector(
-                duration = selectedDuration,
-                onDurationChange = { duration ->
-                    if (isOn) {
-                        controller.start(duration)
-                    } else {
-                        controller.setLastDuration(duration)
-                    }
-                },
-            )
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.large,
+                color = MaterialTheme.colorScheme.surfaceContainerLow,
+            ) {
+                DurationSelector(
+                    duration = selectedDuration,
+                    onDurationChange = { duration ->
+                        if (isOn) {
+                            controller.start(duration)
+                        } else {
+                            controller.setLastDuration(duration)
+                        }
+                    },
+                    modifier = Modifier.padding(16.dp),
+                )
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
         }
@@ -184,22 +205,76 @@ private fun HeroToggle(
 }
 
 @Composable
-private fun RemainingTimeLabel(session: CaffeineSession) {
-    val label = when (session) {
-        CaffeineSession.Off -> stringResource(R.string.status_off)
-        is CaffeineSession.On -> session.displayRemaining()
+private fun SessionStatus(session: CaffeineSession) {
+    val statusKind = when (session) {
+        CaffeineSession.Off -> SessionStatusKind.Off
+        is CaffeineSession.On -> if (session.duration is DurationPreset.Infinite) {
+            SessionStatusKind.InfiniteOn
+        } else {
+            SessionStatusKind.TimedOn
+        }
     }
 
-    AnimatedContent(
-        targetState = label,
-        transitionSpec = { fadeIn() togetherWith fadeOut() },
-        label = "remaining",
-    ) { text ->
-        Text(
-            text = text,
-            style = MaterialTheme.typography.displayMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-            textAlign = TextAlign.Center,
-        )
+    val timeFormatter = remember { DateFormat.getTimeInstance(DateFormat.SHORT) }
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        when (statusKind) {
+            SessionStatusKind.TimedOn -> {
+                val active = session as CaffeineSession.On
+                Text(
+                    text = active.remainingMillis?.let { CaffeineSession.formatCountdown(it) }
+                        ?: stringResource(R.string.status_on),
+                    style = MaterialTheme.typography.displayMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.Center,
+                )
+            }
+            else -> {
+                AnimatedContent(
+                    targetState = statusKind,
+                    transitionSpec = { fadeIn() togetherWith fadeOut() },
+                    label = "statusKind",
+                ) { kind ->
+                    val primaryText = when (kind) {
+                        SessionStatusKind.Off -> stringResource(R.string.status_off)
+                        SessionStatusKind.InfiniteOn -> stringResource(R.string.status_infinite)
+                        SessionStatusKind.TimedOn -> stringResource(R.string.status_on)
+                    }
+                    Text(
+                        text = primaryText,
+                        style = MaterialTheme.typography.displayMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        textAlign = TextAlign.Center,
+                    )
+                }
+            }
+        }
+
+        if (statusKind != SessionStatusKind.Off) {
+            val supportingText = when (val s = session) {
+                is CaffeineSession.On -> when {
+                    s.duration is DurationPreset.Infinite ->
+                        stringResource(R.string.status_screen_stays_awake)
+                    s.endsAtEpochMillis != null ->
+                        stringResource(
+                            R.string.status_until,
+                            timeFormatter.format(Date(s.endsAtEpochMillis)),
+                        )
+                    else -> null
+                }
+                CaffeineSession.Off -> null
+            }
+            if (supportingText != null) {
+                Text(
+                    text = supportingText,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+            }
+        }
     }
 }

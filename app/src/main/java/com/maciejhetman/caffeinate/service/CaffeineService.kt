@@ -64,15 +64,26 @@ class CaffeineService : LifecycleService() {
             }
             ACTION_START, null -> {
                 val duration = DurationPreset.fromSerialized(intent?.getStringExtra(EXTRA_DURATION))
-                beginSession(duration)
+                val endsAtEpoch = intent?.getLongExtra(EXTRA_ENDS_AT_EPOCH, -1L)?.takeIf { it > 0L }
+                beginSession(duration, endsAtEpoch)
             }
         }
-        return START_STICKY
+        return START_REDELIVER_INTENT
     }
 
-    private fun beginSession(duration: DurationPreset) {
+    private fun beginSession(duration: DurationPreset, endsAtEpochMillis: Long? = null) {
         activeDuration = duration
-        endsAtElapsedRealtime = duration.millis?.let { SystemClock.elapsedRealtime() + it }
+        endsAtElapsedRealtime = when {
+            endsAtEpochMillis != null && duration.isTimed -> {
+                val remaining = endsAtEpochMillis - System.currentTimeMillis()
+                if (remaining <= 0L) {
+                    endSession()
+                    return
+                }
+                SystemClock.elapsedRealtime() + remaining
+            }
+            else -> duration.millis?.let { SystemClock.elapsedRealtime() + it }
+        }
 
         startAsForeground(remainingForNotification())
         acquireWakeLock()
@@ -200,15 +211,36 @@ class CaffeineService : LifecycleService() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
-        val remainingText = when {
-            activeDuration is DurationPreset.Infinite || remainingMillis == null -> "∞"
-            else -> CaffeineSession.formatCountdown(remainingMillis)
+        val stopIntent = Intent(this, CaffeineService::class.java).apply {
+            action = ACTION_STOP
+        }
+        val stopPending = PendingIntent.getService(
+            this,
+            1,
+            stopIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+
+        val isInfinite = activeDuration is DurationPreset.Infinite || remainingMillis == null
+        val contentText = if (isInfinite) {
+            getString(R.string.notification_infinite)
+        } else {
+            getString(
+                R.string.notification_remaining,
+                CaffeineSession.formatCountdown(remainingMillis),
+            )
         }
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_caffeine_notification)
-            .setContentText(getString(R.string.notification_remaining, remainingText))
+            .setContentTitle(getString(R.string.app_name))
+            .setContentText(contentText)
             .setContentIntent(openApp)
+            .addAction(
+                R.drawable.ic_caffeine_notification,
+                getString(R.string.action_stop),
+                stopPending,
+            )
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setSilent(true)
@@ -244,6 +276,7 @@ class CaffeineService : LifecycleService() {
         const val ACTION_START = "com.maciejhetman.caffeinate.action.START"
         const val ACTION_STOP = "com.maciejhetman.caffeinate.action.STOP"
         const val EXTRA_DURATION = "extra_duration"
+        const val EXTRA_ENDS_AT_EPOCH = "extra_ends_at_epoch"
         private const val CHANNEL_ID = "caffeine_session"
         private const val NOTIFICATION_ID = 42
     }

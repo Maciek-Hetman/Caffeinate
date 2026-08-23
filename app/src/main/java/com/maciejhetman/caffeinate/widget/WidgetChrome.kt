@@ -1,5 +1,7 @@
 package com.maciejhetman.caffeinate.widget
 
+import android.content.Context
+import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -25,6 +27,7 @@ import androidx.glance.layout.width
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
+import com.maciejhetman.caffeinate.R
 import com.maciejhetman.caffeinate.session.CaffeineSession
 import com.maciejhetman.caffeinate.session.DurationPreset
 
@@ -123,10 +126,11 @@ internal fun CaffeinateWidgetChrome(
     }
 }
 
-internal fun sessionStatusLabel(session: CaffeineSession): String = when (val s = session) {
-    CaffeineSession.Off -> "Off"
+internal fun sessionStatusLabel(context: Context, session: CaffeineSession): String = when (val s = session) {
+    CaffeineSession.Off -> context.getString(R.string.status_off)
     is CaffeineSession.On -> when {
-        s.duration is DurationPreset.Infinite || s.remainingMillis == null -> "On"
+        s.duration is DurationPreset.Infinite || s.remainingMillis == null ->
+            context.getString(R.string.status_on)
         else -> CaffeineSession.formatCountdown(s.remainingMillis)
     }
 }
@@ -141,8 +145,16 @@ internal fun isSessionModeActive(session: CaffeineSession, timed: Boolean): Bool
  * - the other mode is running -> offer to switch modes instead of stopping
  * - nothing running -> offer to start
  */
-internal fun widgetHint(isOwnModeActive: Boolean, isOtherModeActive: Boolean, switchToLabel: String): String = when {
-    isOwnModeActive -> "Tap to stop"
-    isOtherModeActive -> "Tap to switch to $switchToLabel"
-    else -> "Tap to start"
+internal fun widgetHint(
+    context: Context,
+    isOwnModeActive: Boolean,
+    isOtherModeActive: Boolean,
+    @StringRes switchToModeRes: Int,
+): String = when {
+    isOwnModeActive -> context.getString(R.string.widget_hint_stop)
+    isOtherModeActive -> context.getString(
+        R.string.widget_hint_switch,
+        context.getString(switchToModeRes),
+    )
+    else -> context.getString(R.string.widget_hint_start)
 }

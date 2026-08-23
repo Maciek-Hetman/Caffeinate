@@ -39,7 +39,7 @@ class CaffeineController private constructor(
     val stopOnScreenOff = prefs.stopOnScreenOff
 
     fun start(duration: DurationPreset) {
-        scope.launch { startInternal(duration) }
+        scope.launch { startInternal(duration, rememberAsLast = true) }
     }
 
     fun stop() {
@@ -70,7 +70,7 @@ class CaffeineController private constructor(
             if (current is CaffeineSession.On && current.duration is DurationPreset.Infinite) {
                 stop()
             } else {
-                startInternal(DurationPreset.Infinite)
+                startInternal(DurationPreset.Infinite, rememberAsLast = false)
             }
         }
     }
@@ -87,14 +87,14 @@ class CaffeineController private constructor(
             if (current is CaffeineSession.On && current.duration.isTimed) {
                 stop()
             } else {
-                startInternal(prefs.getWidgetTimerDurationOnce())
+                startInternal(prefs.getWidgetTimerDurationOnce(), rememberAsLast = false)
             }
         }
     }
 
     fun startWithLastDuration() {
         scope.launch {
-            startInternal(prefs.getLastDurationOnce())
+            startInternal(prefs.getLastDurationOnce(), rememberAsLast = true)
         }
     }
 
@@ -127,28 +127,42 @@ class CaffeineController private constructor(
         if (_session.value.isActive) {
             stop()
         } else {
-            startInternal(prefs.getLastDurationOnce())
+            startInternal(prefs.getLastDurationOnce(), rememberAsLast = true)
         }
     }
 
-    private suspend fun startInternal(duration: DurationPreset) {
-        prefs.setLastDuration(duration)
+    private suspend fun startInternal(duration: DurationPreset, rememberAsLast: Boolean) {
+        val current = _session.value
+        if (current is CaffeineSession.On && current.duration == duration) {
+            return
+        }
+        if (rememberAsLast) {
+            prefs.setLastDuration(duration)
+        }
+        val endsAtEpochMillis = duration.millis?.let { System.currentTimeMillis() + it }
         // Optimistic On so surfaces update before the foreground service binds.
         publishSession(
             CaffeineSession.On(
                 duration = duration,
                 remainingMillis = duration.millis,
-                endsAtEpochMillis = duration.millis?.let { System.currentTimeMillis() + it },
+                endsAtEpochMillis = endsAtEpochMillis,
             ),
         )
         val intent = Intent(appContext, CaffeineService::class.java).apply {
             action = CaffeineService.ACTION_START
             putExtra(CaffeineService.EXTRA_DURATION, duration.serialize())
+            if (endsAtEpochMillis != null) {
+                putExtra(CaffeineService.EXTRA_ENDS_AT_EPOCH, endsAtEpochMillis)
+            }
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            appContext.startForegroundService(intent)
-        } else {
-            appContext.startService(intent)
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                appContext.startForegroundService(intent)
+            } else {
+                appContext.startService(intent)
+            }
+        } catch (_: Exception) {
+            publishSession(CaffeineSession.Off)
         }
     }
 
@@ -156,12 +170,24 @@ class CaffeineController private constructor(
         val previous = _session.value
         _session.value = session
         val activeChanged = previous.isActive != session.isActive
-        // Tile collects while listening; only rebind / refresh widgets when on↔off flips.
+        val minuteChanged = shouldRefreshWidgetsForMinuteTick(previous, session)
+        // Tile collects while listening; only rebind / refresh widgets when on↔off flips
+        // or the timer widget's displayed minute changes.
         // Per-second countdown ticks must not hammer requestListeningState (breaks tile UI).
         // While a Glance composition is alive, collectAsState still picks up ticks.
-        if (activeChanged) {
+        if (activeChanged || minuteChanged) {
             notifySurfaces()
         }
+    }
+
+    private fun shouldRefreshWidgetsForMinuteTick(
+        previous: CaffeineSession,
+        session: CaffeineSession,
+    ): Boolean {
+        if (session !is CaffeineSession.On || !session.duration.isTimed) return false
+        val newRemaining = session.remainingMillis ?: return false
+        val prevRemaining = (previous as? CaffeineSession.On)?.remainingMillis ?: return true
+        return prevRemaining / 60_000L != newRemaining / 60_000L
     }
 
     private fun notifySurfaces() {

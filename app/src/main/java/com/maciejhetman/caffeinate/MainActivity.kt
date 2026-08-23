@@ -44,12 +44,20 @@ class MainActivity : ComponentActivity() {
 
     private fun maybeRequestNotificationPermission() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
+        val prefs = getSharedPreferences(PREFS_UI, MODE_PRIVATE)
+        if (prefs.getBoolean(KEY_NOTIFICATION_PERMISSION_REQUESTED, false)) return
         val granted = ContextCompat.checkSelfPermission(
             this,
             Manifest.permission.POST_NOTIFICATIONS,
         ) == PackageManager.PERMISSION_GRANTED
         if (!granted) {
+            prefs.edit().putBoolean(KEY_NOTIFICATION_PERMISSION_REQUESTED, true).apply()
             notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
+    }
+
+    companion object {
+        private const val PREFS_UI = "caffeinate_ui"
+        private const val KEY_NOTIFICATION_PERMISSION_REQUESTED = "notification_permission_requested"
     }
 }

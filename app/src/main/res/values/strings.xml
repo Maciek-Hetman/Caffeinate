@@ -1,10 +1,14 @@
 <resources>
     <string name="app_name">Caffeinate</string>
-    <string name="widget_label_description">Toggle keep-awake with your last duration</string>
+    <string name="widget_label_description">Toggle infinite keep-awake</string>
     <string name="widget_timer_label">Timer</string>
     <string name="widget_timer_description">Start a timed keep-awake session</string>
     <string name="widget_timer_preview_length">30m</string>
     <string name="widget_hint_start">Tap to start</string>
+    <string name="widget_hint_stop">Tap to stop</string>
+    <string name="widget_hint_switch">Tap to switch to %1$s</string>
+    <string name="widget_mode_infinite">infinite</string>
+    <string name="widget_mode_timer">timer</string>
     <string name="settings">Settings</string>
     <string name="back">Back</string>
     <string name="cancel">Cancel</string>
@@ -16,6 +20,9 @@
     <string name="duration_update">Update</string>
     <string name="status_off">Off</string>
     <string name="status_on">On</string>
+    <string name="status_infinite">∞</string>
+    <string name="status_screen_stays_awake">Screen stays awake</string>
+    <string name="status_until">Until %1$s</string>
     <string name="toggle_on_cd">Turn off</string>
     <string name="toggle_off_cd">Turn on</string>
     <string name="duration_picker_title">Duration</string>
@@ -23,7 +30,9 @@
     <string name="notification_channel_name">Session</string>
     <string name="notification_channel_description">Shown while the screen is kept awake</string>
     <string name="notification_remaining">%1$s left</string>
+    <string name="notification_infinite">Keeping screen on</string>
     <string name="settings_widget_timer_title">Timer widget</string>
+    <string name="settings_widget_timer_summary">Duration used by the home-screen timer widget only</string>
     <string name="settings_theme_title">Theme</string>
     <string name="theme_mode_system">System</string>
     <string name="theme_mode_light">Light</string>
