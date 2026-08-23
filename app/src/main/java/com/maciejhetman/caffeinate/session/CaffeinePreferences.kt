@@ -31,6 +31,10 @@ class CaffeinePreferences(private val context: Context) {
         prefs[KEY_DYNAMIC_COLOR] ?: true
     }
 
+    val stopOnScreenOff: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[KEY_STOP_ON_SCREEN_OFF] ?: false
+    }
+
     suspend fun setLastDuration(duration: DurationPreset) {
         context.dataStore.edit { prefs ->
             prefs[KEY_LAST_DURATION] = duration.serialize()
@@ -55,6 +59,12 @@ class CaffeinePreferences(private val context: Context) {
         }
     }
 
+    suspend fun setStopOnScreenOff(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_STOP_ON_SCREEN_OFF] = enabled
+        }
+    }
+
     suspend fun getLastDurationOnce(): DurationPreset = lastDuration.first()
 
     suspend fun getWidgetTimerDurationOnce(): DurationPreset.Timed = widgetTimerDuration.first()
@@ -64,6 +74,7 @@ class CaffeinePreferences(private val context: Context) {
         private val KEY_WIDGET_TIMER_DURATION = stringPreferencesKey("widget_timer_duration")
         private val KEY_THEME_MODE = stringPreferencesKey("theme_mode")
         private val KEY_DYNAMIC_COLOR = booleanPreferencesKey("dynamic_color_enabled")
+        private val KEY_STOP_ON_SCREEN_OFF = booleanPreferencesKey("stop_on_screen_off")
 
         private fun String?.toTimedOrDefault(): DurationPreset.Timed {
             if (this == null) return DurationPreset.DefaultTimed

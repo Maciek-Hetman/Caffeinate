@@ -36,6 +36,7 @@ class CaffeineController private constructor(
     val widgetTimerDuration = prefs.widgetTimerDuration
     val themeMode = prefs.themeMode
     val dynamicColorEnabled = prefs.dynamicColorEnabled
+    val stopOnScreenOff = prefs.stopOnScreenOff
 
     fun start(duration: DurationPreset) {
         scope.launch { startInternal(duration) }
@@ -116,6 +117,10 @@ class CaffeineController private constructor(
 
     fun setDynamicColorEnabled(enabled: Boolean) {
         scope.launch { prefs.setDynamicColorEnabled(enabled) }
+    }
+
+    fun setStopOnScreenOff(enabled: Boolean) {
+        scope.launch { prefs.setStopOnScreenOff(enabled) }
     }
 
     private suspend fun toggleInternal() {

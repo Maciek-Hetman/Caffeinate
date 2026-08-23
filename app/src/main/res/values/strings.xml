@@ -29,5 +29,8 @@
     <string name="theme_mode_light">Light</string>
     <string name="theme_mode_dark">Dark</string>
     <string name="settings_dynamic_color_title">Material You</string>
+    <string name="settings_session_title">Session</string>
+    <string name="settings_stop_on_screen_off_title">Stop with power button</string>
+    <string name="settings_stop_on_screen_off_summary">Disable Caffeinate when you turn the screen off</string>
     <string name="fgs_type_description">Keep the screen awake</string>
 </resources>

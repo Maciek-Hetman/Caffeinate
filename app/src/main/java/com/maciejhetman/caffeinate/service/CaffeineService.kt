@@ -4,13 +4,17 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.PowerManager
 import android.os.SystemClock
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
 import com.maciejhetman.caffeinate.MainActivity
@@ -20,6 +24,7 @@ import com.maciejhetman.caffeinate.session.CaffeineSession
 import com.maciejhetman.caffeinate.session.DurationPreset
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
@@ -32,6 +37,23 @@ class CaffeineService : LifecycleService() {
     private var countdownJob: Job? = null
     private var activeDuration: DurationPreset = DurationPreset.Default
     private var endsAtElapsedRealtime: Long? = null
+    private var screenOffReceiverRegistered = false
+
+    private val screenOffReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (intent.action != Intent.ACTION_SCREEN_OFF) return
+            val pendingResult = goAsync()
+            lifecycleScope.launch {
+                try {
+                    if (CaffeineController.get(this@CaffeineService).stopOnScreenOff.first()) {
+                        endSession()
+                    }
+                } finally {
+                    pendingResult.finish()
+                }
+            }
+        }
+    }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
@@ -54,8 +76,26 @@ class CaffeineService : LifecycleService() {
 
         startAsForeground(remainingForNotification())
         acquireWakeLock()
+        registerScreenOffReceiver()
         publishState()
         startCountdown()
+    }
+
+    private fun registerScreenOffReceiver() {
+        if (screenOffReceiverRegistered) return
+        ContextCompat.registerReceiver(
+            this,
+            screenOffReceiver,
+            IntentFilter(Intent.ACTION_SCREEN_OFF),
+            ContextCompat.RECEIVER_NOT_EXPORTED,
+        )
+        screenOffReceiverRegistered = true
+    }
+
+    private fun unregisterScreenOffReceiver() {
+        if (!screenOffReceiverRegistered) return
+        unregisterReceiver(screenOffReceiver)
+        screenOffReceiverRegistered = false
     }
 
     private fun startCountdown() {
@@ -104,6 +144,7 @@ class CaffeineService : LifecycleService() {
         countdownJob?.cancel()
         countdownJob = null
         endsAtElapsedRealtime = null
+        unregisterScreenOffReceiver()
         releaseWakeLock()
         CaffeineController.get(this).publishSession(CaffeineSession.Off)
         stopForeground(STOP_FOREGROUND_REMOVE)
@@ -191,6 +232,7 @@ class CaffeineService : LifecycleService() {
 
     override fun onDestroy() {
         countdownJob?.cancel()
+        unregisterScreenOffReceiver()
         releaseWakeLock()
         if (CaffeineController.get(this).session.value.isActive) {
             CaffeineController.get(this).publishSession(CaffeineSession.Off)

@@ -54,6 +54,9 @@ fun SettingsScreen(
     val dynamicColorEnabled by controller.dynamicColorEnabled.collectAsStateWithLifecycle(
         initialValue = true,
     )
+    val stopOnScreenOff by controller.stopOnScreenOff.collectAsStateWithLifecycle(
+        initialValue = false,
+    )
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -106,6 +109,36 @@ fun SettingsScreen(
                         onCheckedChange = { controller.setDynamicColorEnabled(it) },
                     )
                 }
+            }
+
+            Text(
+                text = stringResource(R.string.settings_session_title),
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(end = 16.dp),
+                ) {
+                    Text(
+                        text = stringResource(R.string.settings_stop_on_screen_off_title),
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                    Text(
+                        text = stringResource(R.string.settings_stop_on_screen_off_summary),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Switch(
+                    checked = stopOnScreenOff,
+                    onCheckedChange = { controller.setStopOnScreenOff(it) },
+                )
             }
 
             Text(
