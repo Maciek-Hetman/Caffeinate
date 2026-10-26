@@ -1,8 +1,10 @@
 package com.maciejhetman.caffeinate.widget
 
 import android.content.Context
+import android.os.Build
 import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.ColorFilter
@@ -10,11 +12,14 @@ import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
 import androidx.glance.Image
 import androidx.glance.ImageProvider
+import androidx.glance.LocalSize
 import androidx.glance.action.Action
 import androidx.glance.action.clickable
+import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.appWidgetBackground
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.background
+import androidx.glance.color.ColorProviders
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.Column
@@ -24,12 +29,36 @@ import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.padding
 import androidx.glance.layout.size
 import androidx.glance.layout.width
+import androidx.glance.material3.ColorProviders
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import com.maciejhetman.caffeinate.R
-import com.maciejhetman.caffeinate.session.CaffeineSession
 import com.maciejhetman.caffeinate.session.DurationPreset
+import com.maciejhetman.caffeinate.ui.theme.DarkColorScheme
+import com.maciejhetman.caffeinate.ui.theme.LightColorScheme
+
+/** Below this width only the icon and status fit; title and hint are dropped. */
+private val CompactWidth = 160.dp
+
+internal val WidgetSizeMode = SizeMode.Responsive(
+    setOf(DpSize(110.dp, 48.dp), DpSize(CompactWidth, 48.dp)),
+)
+
+/** The app's fallback palette, used when Material You is off or unavailable. */
+private val AppWidgetColors: ColorProviders = ColorProviders(
+    light = LightColorScheme,
+    dark = DarkColorScheme,
+)
+
+/** Wallpaper colors when the user keeps Material You on (API 31+), else the app palette. */
+@Composable
+internal fun widgetColors(dynamicColor: Boolean): ColorProviders =
+    if (dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        GlanceTheme.colors
+    } else {
+        AppWidgetColors
+    }
 
 @Composable
 internal fun CaffeinateWidgetChrome(
@@ -40,6 +69,7 @@ internal fun CaffeinateWidgetChrome(
     iconRes: Int,
     action: Action,
 ) {
+    val compact = LocalSize.current.width < CompactWidth
     val container = if (isOn) {
         GlanceTheme.colors.primaryContainer
     } else {
@@ -71,16 +101,17 @@ internal fun CaffeinateWidgetChrome(
             .fillMaxSize()
             .appWidgetBackground()
             .background(container)
-            .cornerRadius(20.dp)
+            .widgetCornerRadius()
             .clickable(action)
-            .padding(horizontal = 14.dp, vertical = 12.dp),
+            .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalAlignment = Alignment.Start,
     ) {
         Box(
             modifier = GlanceModifier
                 .size(44.dp)
-                .cornerRadius(22.dp)
+                // Circle at rest, squircle while running — echoes the in-app shape morph.
+                .cornerRadius(if (isOn) 14.dp else 22.dp)
                 .background(iconBg),
             contentAlignment = Alignment.Center,
         ) {
@@ -96,15 +127,17 @@ internal fun CaffeinateWidgetChrome(
             verticalAlignment = Alignment.CenterVertically,
             horizontalAlignment = Alignment.Start,
         ) {
-            Text(
-                text = title,
-                style = TextStyle(
-                    color = muted,
-                    fontWeight = FontWeight.Medium,
-                    fontSize = 12.sp,
-                ),
-                maxLines = 1,
-            )
+            if (!compact) {
+                Text(
+                    text = title,
+                    style = TextStyle(
+                        color = muted,
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 12.sp,
+                    ),
+                    maxLines = 1,
+                )
+            }
             Text(
                 text = status,
                 style = TextStyle(
@@ -114,30 +147,32 @@ internal fun CaffeinateWidgetChrome(
                 ),
                 maxLines = 1,
             )
-            Text(
-                text = hint,
-                style = TextStyle(
-                    color = muted,
-                    fontSize = 11.sp,
-                ),
-                maxLines = 1,
-            )
+            if (!compact) {
+                Text(
+                    text = hint,
+                    style = TextStyle(
+                        color = muted,
+                        fontSize = 11.sp,
+                    ),
+                    maxLines = 1,
+                )
+            }
         }
     }
 }
 
-internal fun sessionStatusLabel(context: Context, session: CaffeineSession): String = when (val s = session) {
-    CaffeineSession.Off -> context.getString(R.string.status_off)
-    is CaffeineSession.On -> when {
-        s.duration is DurationPreset.Infinite || s.remainingMillis == null ->
-            context.getString(R.string.status_on)
-        else -> CaffeineSession.formatCountdown(s.remainingMillis)
+/** Matches the launcher's own widget corner radius where the platform exposes it. */
+private fun GlanceModifier.widgetCornerRadius(): GlanceModifier =
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        cornerRadius(android.R.dimen.system_app_widget_background_radius)
+    } else {
+        cornerRadius(24.dp)
     }
-}
 
-/** Whether the running session (if any) matches a widget's own mode (timed vs infinite). */
-internal fun isSessionModeActive(session: CaffeineSession, timed: Boolean): Boolean =
-    session is CaffeineSession.On && session.duration.isTimed == timed
+internal fun timedStatusLabel(context: Context, session: WidgetSession): String =
+    session.remainingMinutes
+        ?.let { DurationPreset.formatMinutes(it) }
+        ?: context.getString(R.string.status_on)
 
 /**
  * Hint text for a widget whose own mode may differ from the currently running session:

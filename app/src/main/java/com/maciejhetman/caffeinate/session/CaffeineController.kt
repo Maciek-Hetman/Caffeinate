@@ -3,7 +3,6 @@ package com.maciejhetman.caffeinate.session
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.os.Build
 import android.service.quicksettings.TileService
 import androidx.glance.appwidget.updateAll
 import com.maciejhetman.caffeinate.service.CaffeineService
@@ -14,8 +13,11 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
@@ -32,103 +34,98 @@ class CaffeineController private constructor(
     private val _session = MutableStateFlow<CaffeineSession>(CaffeineSession.Off)
     val session: StateFlow<CaffeineSession> = _session.asStateFlow()
 
-    val lastDuration = prefs.lastDuration
-    val widgetTimerDuration = prefs.widgetTimerDuration
-    val themeMode = prefs.themeMode
-    val dynamicColorEnabled = prefs.dynamicColorEnabled
-    val stopOnScreenOff = prefs.stopOnScreenOff
+    /**
+     * Persisted preferences, loaded once up front so every surface renders the real values on its
+     * first frame (no theme flash, no default-then-real duration flicker). The file is tiny.
+     */
+    val settings: StateFlow<CaffeineSettings> = prefs.settings.stateIn(
+        scope = scope,
+        started = SharingStarted.Eagerly,
+        initialValue = runBlocking { prefs.settings.first() },
+    )
 
     fun start(duration: DurationPreset) {
         scope.launch { startInternal(duration, rememberAsLast = true) }
     }
 
     fun stop() {
+        // Nothing to stop; avoids spinning up the service just to tear it down.
+        if (!_session.value.isActive) return
         val intent = Intent(appContext, CaffeineService::class.java).apply {
             action = CaffeineService.ACTION_STOP
         }
-        appContext.startService(intent)
+        try {
+            appContext.startService(intent)
+        } catch (_: IllegalStateException) {
+            // Background start refused, which means the service is not running either.
+            publishSession(CaffeineSession.Off)
+        }
     }
 
     fun toggle() {
-        scope.launch { toggleInternal() }
-    }
-
-    /** Blocking helper for Glance action callbacks. */
-    fun toggleBlocking() {
-        runBlocking { toggleInternal() }
+        if (_session.value.isActive) {
+            stop()
+        } else {
+            scope.launch { startInternal(settings.value.lastDuration, rememberAsLast = true) }
+        }
     }
 
     /**
-     * Blocking helper for the Caffeinate (infinite) widget tap.
+     * Caffeinate (infinite) widget tap.
      * - Off -> starts an infinite session.
      * - Infinite session running -> stops it.
      * - Timed session running -> switches it to infinite without stopping.
      */
-    fun toggleInfiniteBlocking() {
-        runBlocking {
-            val current = _session.value
-            if (current is CaffeineSession.On && current.duration is DurationPreset.Infinite) {
-                stop()
-            } else {
-                startInternal(DurationPreset.Infinite, rememberAsLast = false)
-            }
+    suspend fun toggleInfinite() {
+        val current = _session.value
+        if (current is CaffeineSession.On && current.duration is DurationPreset.Infinite) {
+            stop()
+        } else {
+            startInternal(DurationPreset.Infinite, rememberAsLast = false)
         }
     }
 
     /**
-     * Blocking helper for the Timer widget tap, using the timer-widget duration from settings.
+     * Timer widget tap, using the timer-widget duration from settings.
      * - Off -> starts a timed session.
      * - Timed session running -> stops it.
      * - Infinite session running -> switches it to timed without stopping.
      */
-    fun toggleWidgetTimerBlocking() {
-        runBlocking {
-            val current = _session.value
-            if (current is CaffeineSession.On && current.duration.isTimed) {
-                stop()
-            } else {
-                startInternal(prefs.getWidgetTimerDurationOnce(), rememberAsLast = false)
-            }
-        }
-    }
-
-    fun startWithLastDuration() {
-        scope.launch {
-            startInternal(prefs.getLastDurationOnce(), rememberAsLast = true)
+    suspend fun toggleWidgetTimer() {
+        val current = _session.value
+        if (current is CaffeineSession.On && current.duration.isTimed) {
+            stop()
+        } else {
+            startInternal(settings.value.widgetTimerDuration, rememberAsLast = false)
         }
     }
 
     fun setLastDuration(duration: DurationPreset) {
-        scope.launch {
-            prefs.setLastDuration(duration)
-        }
+        scope.launch { prefs.setLastDuration(duration) }
     }
 
     fun setWidgetTimerDuration(duration: DurationPreset.Timed) {
         scope.launch {
             prefs.setWidgetTimerDuration(duration)
-            runCatching { TimerCaffeineWidget().updateAll(appContext) }
+            refreshWidgets()
         }
     }
 
     fun setThemeMode(mode: ThemeMode) {
+        mode.applyToPlatform(appContext)
         scope.launch { prefs.setThemeMode(mode) }
     }
 
     fun setDynamicColorEnabled(enabled: Boolean) {
-        scope.launch { prefs.setDynamicColorEnabled(enabled) }
+        scope.launch {
+            prefs.setDynamicColorEnabled(enabled)
+            // Widgets follow the same palette choice as the app.
+            refreshWidgets()
+        }
     }
 
     fun setStopOnScreenOff(enabled: Boolean) {
         scope.launch { prefs.setStopOnScreenOff(enabled) }
-    }
-
-    private suspend fun toggleInternal() {
-        if (_session.value.isActive) {
-            stop()
-        } else {
-            startInternal(prefs.getLastDurationOnce(), rememberAsLast = true)
-        }
     }
 
     private suspend fun startInternal(duration: DurationPreset, rememberAsLast: Boolean) {
@@ -156,12 +153,9 @@ class CaffeineController private constructor(
             }
         }
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                appContext.startForegroundService(intent)
-            } else {
-                appContext.startService(intent)
-            }
+            appContext.startForegroundService(intent)
         } catch (_: Exception) {
+            // e.g. ForegroundServiceStartNotAllowedException when started from the background.
             publishSession(CaffeineSession.Off)
         }
     }
@@ -170,12 +164,13 @@ class CaffeineController private constructor(
         val previous = _session.value
         _session.value = session
         val activeChanged = previous.isActive != session.isActive
+        val modeChanged = (previous as? CaffeineSession.On)?.duration?.isTimed !=
+            (session as? CaffeineSession.On)?.duration?.isTimed
         val minuteChanged = shouldRefreshWidgetsForMinuteTick(previous, session)
-        // Tile collects while listening; only rebind / refresh widgets when on↔off flips
-        // or the timer widget's displayed minute changes.
+        // Tile collects while listening; only rebind / refresh widgets when on↔off flips,
+        // the mode changes, or the timer widget's displayed minute changes.
         // Per-second countdown ticks must not hammer requestListeningState (breaks tile UI).
-        // While a Glance composition is alive, collectAsState still picks up ticks.
-        if (activeChanged || minuteChanged) {
+        if (activeChanged || modeChanged || minuteChanged) {
             notifySurfaces()
         }
     }
@@ -187,7 +182,8 @@ class CaffeineController private constructor(
         if (session !is CaffeineSession.On || !session.duration.isTimed) return false
         val newRemaining = session.remainingMillis ?: return false
         val prevRemaining = (previous as? CaffeineSession.On)?.remainingMillis ?: return true
-        return prevRemaining / 60_000L != newRemaining / 60_000L
+        return CaffeineSession.remainingWholeMinutes(prevRemaining) !=
+            CaffeineSession.remainingWholeMinutes(newRemaining)
     }
 
     private fun notifySurfaces() {
@@ -195,10 +191,12 @@ class CaffeineController private constructor(
             appContext,
             ComponentName(appContext, CaffeineTileService::class.java),
         )
-        scope.launch(Dispatchers.IO) {
-            runCatching { CaffeineWidget().updateAll(appContext) }
-            runCatching { TimerCaffeineWidget().updateAll(appContext) }
-        }
+        scope.launch(Dispatchers.IO) { refreshWidgets() }
+    }
+
+    private suspend fun refreshWidgets() {
+        runCatching { CaffeineWidget().updateAll(appContext) }
+        runCatching { TimerCaffeineWidget().updateAll(appContext) }
     }
 
     companion object {

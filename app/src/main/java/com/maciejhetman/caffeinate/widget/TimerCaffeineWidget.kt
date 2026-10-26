@@ -12,25 +12,28 @@ import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.provideContent
 import com.maciejhetman.caffeinate.R
 import com.maciejhetman.caffeinate.session.CaffeineController
-import com.maciejhetman.caffeinate.session.CaffeineSession
 import com.maciejhetman.caffeinate.session.DurationPreset
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 
 /**
  * Starts a timed keep-awake session using the length configured in Settings.
  */
 class TimerCaffeineWidget : GlanceAppWidget() {
 
+    override val sizeMode = WidgetSizeMode
+
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val controller = CaffeineController.get(context)
+        val sessions = controller.session.map(WidgetSession::from).distinctUntilChanged()
+        val initialSession = WidgetSession.from(controller.session.value)
         provideContent {
-            val session by controller.session.collectAsState()
-            val timerDuration by controller.widgetTimerDuration.collectAsState(
-                initial = DurationPreset.DefaultTimed,
-            )
-            GlanceTheme {
+            val widgetSession by sessions.collectAsState(initial = initialSession)
+            val settings by controller.settings.collectAsState()
+            GlanceTheme(colors = widgetColors(settings.dynamicColor)) {
                 TimerWidgetContent(
-                    session = session,
-                    timerDuration = timerDuration,
+                    session = widgetSession,
+                    timerDuration = settings.widgetTimerDuration,
                 )
             }
         }
@@ -39,16 +42,16 @@ class TimerCaffeineWidget : GlanceAppWidget() {
 
 @Composable
 private fun TimerWidgetContent(
-    session: CaffeineSession,
+    session: WidgetSession,
     timerDuration: DurationPreset.Timed,
 ) {
     val context = LocalContext.current
     // This widget represents a timed session. When an infinite session is running instead
     // (e.g. started from the Caffeinate widget), it shows as inactive with an option to switch.
-    val isTimedActive = isSessionModeActive(session, timed = true)
-    val isInfiniteActive = isSessionModeActive(session, timed = false)
+    val isTimedActive = session.isModeActive(timed = true)
+    val isInfiniteActive = session.isModeActive(timed = false)
     val status = if (isTimedActive) {
-        sessionStatusLabel(context, session)
+        timedStatusLabel(context, session)
     } else {
         timerDuration.label
     }

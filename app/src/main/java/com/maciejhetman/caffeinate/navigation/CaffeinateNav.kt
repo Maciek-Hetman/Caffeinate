@@ -1,7 +1,6 @@
 package com.maciejhetman.caffeinate.navigation
 
-import androidx.compose.animation.core.CubicBezierEasing
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -9,98 +8,106 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.MotionScheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.snapshots.SnapshotStateList
+import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.IntOffset
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.ui.NavDisplay
 import com.maciejhetman.caffeinate.ui.home.HomeScreen
 import com.maciejhetman.caffeinate.ui.settings.SettingsScreen
+import com.maciejhetman.caffeinate.ui.theme.CaffeinateTheme
 
-data object HomeKey : NavKey
-data object SettingsKey : NavKey
+sealed interface Screen : NavKey {
+    val route: String
 
-/** Material emphasized easing used by Google system predictive back. */
-private val EmphasizedEasing = CubicBezierEasing(0.2f, 0.0f, 0.0f, 1.0f)
-private const val NavDurationMs = 450
+    data object Home : Screen {
+        override val route = "home"
+    }
 
+    data object Settings : Screen {
+        override val route = "settings"
+    }
+
+    companion object {
+        val all: List<Screen> = listOf(Home, Settings)
+    }
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+private val NavMotion = MotionScheme.standard()
+
+/** Saves the back stack as route names so rotation / process death keep the open screen. */
+private val BackStackSaver = listSaver<SnapshotStateList<NavKey>, String>(
+    save = { stack -> stack.filterIsInstance<Screen>().map { it.route } },
+    restore = { routes ->
+        routes.mapNotNull { route -> Screen.all.firstOrNull { it.route == route } }
+            .ifEmpty { listOf(Screen.Home) }
+            .toMutableStateList()
+    },
+)
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun CaffeinateNavHost(modifier: Modifier = Modifier) {
-    val backStack = remember { mutableStateListOf<NavKey>(HomeKey) }
+    val backStack = rememberSaveable(saver = BackStackSaver) {
+        mutableListOf<NavKey>(Screen.Home).toMutableStateList()
+    }
+    // Standard (non-bouncy) springs: an overshooting full-screen slide would expose the edge.
+    val spatial: FiniteAnimationSpec<IntOffset> = NavMotion.defaultSpatialSpec()
+    val spatialFloat: FiniteAnimationSpec<Float> = NavMotion.defaultSpatialSpec()
+    val fadeInSpec: FiniteAnimationSpec<Float> = NavMotion.defaultEffectsSpec()
+    val fadeOutSpec: FiniteAnimationSpec<Float> = NavMotion.fastEffectsSpec()
 
-    // Opaque surface under NavDisplay so fades never reveal the white window.
+    // Opaque surface under NavDisplay so fades never reveal the window background.
     Surface(
         modifier = modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background,
+        color = CaffeinateTheme.surfaces.page,
     ) {
         NavDisplay(
             backStack = backStack,
             onBack = { backStack.removeLastOrNull() },
             modifier = Modifier.fillMaxSize(),
             transitionSpec = {
-                (
-                    slideInHorizontally(
-                        animationSpec = tween(NavDurationMs, easing = EmphasizedEasing),
-                    ) { it } +
-                        fadeIn(animationSpec = tween(NavDurationMs / 2, delayMillis = 45))
-                    ) togetherWith (
-                    slideOutHorizontally(
-                        animationSpec = tween(NavDurationMs, easing = EmphasizedEasing),
-                    ) { -it / 4 } +
-                        fadeOut(animationSpec = tween(90))
-                    )
+                (slideInHorizontally(spatial) { it } + fadeIn(fadeInSpec)) togetherWith
+                    (slideOutHorizontally(spatial) { -it / 4 } + fadeOut(fadeOutSpec))
             },
             popTransitionSpec = {
-                (
-                    slideInHorizontally(
-                        animationSpec = tween(NavDurationMs, easing = EmphasizedEasing),
-                    ) { -it / 4 } +
-                        fadeIn(animationSpec = tween(NavDurationMs / 2, delayMillis = 45))
-                    ) togetherWith (
-                    slideOutHorizontally(
-                        animationSpec = tween(NavDurationMs, easing = EmphasizedEasing),
-                    ) { it } +
-                        fadeOut(animationSpec = tween(90))
-                    )
+                (slideInHorizontally(spatial) { -it / 4 } + fadeIn(fadeInSpec)) togetherWith
+                    (slideOutHorizontally(spatial) { it } + fadeOut(fadeOutSpec))
             },
             // Predictive back: underlying screen scales up from behind; current follows the gesture.
             predictivePopTransitionSpec = {
-                (
-                    scaleIn(
-                        initialScale = 0.92f,
-                        animationSpec = tween(NavDurationMs, easing = EmphasizedEasing),
-                    ) +
-                        fadeIn(animationSpec = tween(NavDurationMs / 3))
-                    ) togetherWith (
-                    slideOutHorizontally(
-                        animationSpec = tween(NavDurationMs, easing = EmphasizedEasing),
-                    ) { full -> (full * 0.15f).toInt() } +
-                        fadeOut(animationSpec = tween(NavDurationMs / 2))
-                    )
+                (scaleIn(spatialFloat, initialScale = 0.92f) + fadeIn(fadeInSpec)) togetherWith
+                    (slideOutHorizontally(spatial) { full -> (full * 0.15f).toInt() } +
+                        fadeOut(fadeOutSpec))
             },
             entryProvider = entryProvider {
-                entry<HomeKey> {
+                entry<Screen.Home> {
                     Surface(
                         modifier = Modifier.fillMaxSize(),
-                        color = MaterialTheme.colorScheme.background,
+                        color = CaffeinateTheme.surfaces.page,
                     ) {
                         HomeScreen(
                             onOpenSettings = {
-                                if (backStack.lastOrNull() != SettingsKey) {
-                                    backStack.add(SettingsKey)
+                                if (backStack.lastOrNull() != Screen.Settings) {
+                                    backStack.add(Screen.Settings)
                                 }
                             },
                         )
                     }
                 }
-                entry<SettingsKey> {
+                entry<Screen.Settings> {
                     Surface(
                         modifier = Modifier.fillMaxSize(),
-                        color = MaterialTheme.colorScheme.background,
+                        color = CaffeinateTheme.surfaces.page,
                     ) {
                         SettingsScreen(
                             onBack = { backStack.removeLastOrNull() },

@@ -1,34 +1,49 @@
 package com.maciejhetman.caffeinate.ui.settings
 
 import android.os.Build
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.outlined.DarkMode
+import androidx.compose.material.icons.outlined.Palette
+import androidx.compose.material.icons.outlined.PowerSettingsNew
+import androidx.compose.material.icons.outlined.Timer
+import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.LargeFlexibleTopAppBar
+import androidx.compose.material3.ListItemColors
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.ToggleButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -40,10 +55,10 @@ import com.maciejhetman.caffeinate.R
 import com.maciejhetman.caffeinate.session.CaffeineController
 import com.maciejhetman.caffeinate.session.DurationPreset
 import com.maciejhetman.caffeinate.session.ThemeMode
-import com.maciejhetman.caffeinate.ui.components.AppCard
 import com.maciejhetman.caffeinate.ui.components.DurationSelector
+import com.maciejhetman.caffeinate.ui.theme.CaffeinateTheme
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
@@ -51,26 +66,36 @@ fun SettingsScreen(
 ) {
     val context = LocalContext.current
     val controller = CaffeineController.get(context)
-    val widgetTimerDuration by controller.widgetTimerDuration.collectAsStateWithLifecycle(
-        initialValue = DurationPreset.DefaultTimed,
+    val settings by controller.settings.collectAsStateWithLifecycle()
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    val page = CaffeinateTheme.surfaces.page
+    val card = CaffeinateTheme.surfaces.card
+    val onCard = MaterialTheme.colorScheme.onSurface
+    val iconColor = MaterialTheme.colorScheme.onSurfaceVariant
+    // A switch row is "checked", not selected: keep it on the card color like its neighbours.
+    val itemColors = ListItemDefaults.segmentedColors(
+        containerColor = card,
+        contentColor = onCard,
+        leadingContentColor = iconColor,
+        selectedContainerColor = card,
+        selectedContentColor = onCard,
+        selectedLeadingContentColor = iconColor,
     )
-    val themeMode by controller.themeMode.collectAsStateWithLifecycle(
-        initialValue = ThemeMode.System,
-    )
-    val dynamicColorEnabled by controller.dynamicColorEnabled.collectAsStateWithLifecycle(
-        initialValue = true,
-    )
-    val stopOnScreenOff by controller.stopOnScreenOff.collectAsStateWithLifecycle(
-        initialValue = false,
-    )
+    val supportsDynamicColor = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
 
     Scaffold(
-        modifier = modifier.fillMaxSize(),
+        modifier = modifier
+            .fillMaxSize()
+            .nestedScroll(scrollBehavior.nestedScrollConnection),
+        containerColor = page,
         topBar = {
-            TopAppBar(
+            LargeFlexibleTopAppBar(
                 title = { Text(stringResource(R.string.settings)) },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(
+                        onClick = onBack,
+                        shapes = IconButtonDefaults.shapes(),
+                    ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = stringResource(R.string.back),
@@ -78,56 +103,85 @@ fun SettingsScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                    scrolledContainerColor = MaterialTheme.colorScheme.background,
+                    containerColor = page,
+                    scrolledContainerColor = page,
                 ),
+                scrollBehavior = scrollBehavior,
             )
         },
     ) { innerPadding ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .verticalScroll(rememberScrollState())
-                .padding(24.dp),
+                .verticalScroll(rememberScrollState()),
+            contentAlignment = Alignment.TopCenter,
         ) {
-            AppCard {
-                Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
-                    SettingsGroupTitle(stringResource(R.string.settings_theme_title))
-                    ThemeModeSelector(
-                        themeMode = themeMode,
-                        onThemeModeChange = { controller.setThemeMode(it) },
-                    )
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                        SettingsSwitchRow(
+            Column(
+                modifier = Modifier
+                    .widthIn(max = 640.dp)
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, end = 16.dp, bottom = 32.dp),
+                verticalArrangement = Arrangement.spacedBy(24.dp),
+            ) {
+                val appearanceCount = if (supportsDynamicColor) 2 else 1
+                SettingsSection(title = stringResource(R.string.settings_appearance_title)) {
+                    SegmentedListItem(
+                        shapes = ListItemDefaults.segmentedShapes(index = 0, count = appearanceCount),
+                        colors = itemColors,
+                        verticalAlignment = Alignment.Top,
+                        leadingContent = { SettingsIcon(Icons.Outlined.DarkMode) },
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Text(stringResource(R.string.settings_theme_title))
+                            ThemeModeSelector(
+                                themeMode = settings.themeMode,
+                                onThemeModeChange = { controller.setThemeMode(it) },
+                            )
+                        }
+                    }
+                    if (supportsDynamicColor) {
+                        SwitchItem(
                             title = stringResource(R.string.settings_dynamic_color_title),
-                            checked = dynamicColorEnabled,
+                            icon = Icons.Outlined.Palette,
+                            checked = settings.dynamicColor,
                             onCheckedChange = { controller.setDynamicColorEnabled(it) },
+                            index = 1,
+                            count = appearanceCount,
+                            colors = itemColors,
                         )
                     }
+                }
 
-                    SettingsDivider()
-
-                    SettingsGroupTitle(stringResource(R.string.settings_session_title))
-                    SettingsSwitchRow(
+                SettingsSection(title = stringResource(R.string.settings_session_title)) {
+                    SwitchItem(
                         title = stringResource(R.string.settings_stop_on_screen_off_title),
-                        checked = stopOnScreenOff,
+                        icon = Icons.Outlined.PowerSettingsNew,
+                        checked = settings.stopOnScreenOff,
                         onCheckedChange = { controller.setStopOnScreenOff(it) },
+                        index = 0,
+                        count = 1,
+                        colors = itemColors,
                     )
+                }
 
-                    SettingsDivider()
-
-                    SettingsGroupTitle(stringResource(R.string.settings_widget_timer_title))
-                    DurationSelector(
-                        duration = widgetTimerDuration,
-                        onDurationChange = { duration ->
-                            if (duration is DurationPreset.Timed) {
-                                controller.setWidgetTimerDuration(duration)
-                            }
-                        },
-                        timerOnly = true,
-                        animateTimerReveal = false,
-                    )
+                SettingsSection(title = stringResource(R.string.settings_widget_timer_title)) {
+                    SegmentedListItem(
+                        shapes = ListItemDefaults.segmentedShapes(index = 0, count = 1),
+                        colors = itemColors,
+                        verticalAlignment = Alignment.Top,
+                        leadingContent = { SettingsIcon(Icons.Outlined.Timer) },
+                    ) {
+                        DurationSelector(
+                            duration = settings.widgetTimerDuration,
+                            onDurationChange = { duration ->
+                                if (duration is DurationPreset.Timed) {
+                                    controller.setWidgetTimerDuration(duration)
+                                }
+                            },
+                            timerOnly = true,
+                        )
+                    }
                 }
             }
         }
@@ -135,64 +189,92 @@ fun SettingsScreen(
 }
 
 @Composable
-private fun SettingsGroupTitle(title: String) {
-    Text(
-        text = title,
-        style = MaterialTheme.typography.titleMedium,
-        color = MaterialTheme.colorScheme.onSurface,
-    )
-}
-
-@Composable
-private fun SettingsDivider() {
-    HorizontalDivider(
-        modifier = Modifier.padding(vertical = 8.dp),
-        color = MaterialTheme.colorScheme.outlineVariant,
-    )
-}
-
-@Composable
-private fun SettingsSwitchRow(
+private fun SettingsSection(
     title: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit,
 ) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .semantics { role = Role.Switch }
-            .clickable { onCheckedChange(!checked) }
-            .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
+    Column(verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
         Text(
             text = title,
-            style = MaterialTheme.typography.bodyLarge,
-            modifier = Modifier.weight(1f),
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(start = 16.dp, bottom = 8.dp),
         )
-        Switch(
-            checked = checked,
-            onCheckedChange = null,
-        )
+        content()
     }
 }
 
+@Composable
+private fun SettingsIcon(icon: ImageVector) {
+    Icon(imageVector = icon, contentDescription = null)
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun SwitchItem(
+    title: String,
+    icon: ImageVector,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    index: Int,
+    count: Int,
+    colors: ListItemColors,
+) {
+    SegmentedListItem(
+        checked = checked,
+        onCheckedChange = onCheckedChange,
+        shapes = ListItemDefaults.segmentedShapes(index = index, count = count),
+        colors = colors,
+        leadingContent = { SettingsIcon(icon) },
+        trailingContent = {
+            Switch(
+                checked = checked,
+                onCheckedChange = null,
+                thumbContent = if (checked) {
+                    {
+                        Icon(
+                            imageVector = Icons.Filled.Check,
+                            contentDescription = null,
+                            modifier = Modifier.size(SwitchDefaults.IconSize),
+                        )
+                    }
+                } else {
+                    null
+                },
+            )
+        },
+    ) {
+        Text(title)
+    }
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun ThemeModeSelector(
     themeMode: ThemeMode,
     onThemeModeChange: (ThemeMode) -> Unit,
 ) {
     val modes = ThemeMode.entries
-    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .selectableGroup(),
+        horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween),
+    ) {
         modes.forEachIndexed { index, mode ->
-            SegmentedButton(
-                selected = themeMode == mode,
-                onClick = { onThemeModeChange(mode) },
-                shape = SegmentedButtonDefaults.itemShape(index = index, count = modes.size),
+            ToggleButton(
+                checked = themeMode == mode,
+                onCheckedChange = { if (themeMode != mode) onThemeModeChange(mode) },
+                modifier = Modifier
+                    .weight(1f)
+                    .semantics { role = Role.RadioButton },
+                shapes = when (index) {
+                    0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
+                    modes.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
+                    else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
+                },
             ) {
-                Text(stringResource(mode.labelRes()))
+                Text(stringResource(mode.labelRes()), maxLines = 1)
             }
         }
     }
