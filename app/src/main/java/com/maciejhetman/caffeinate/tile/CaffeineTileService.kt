@@ -8,7 +8,6 @@ import com.maciejhetman.caffeinate.session.CaffeineController
 import com.maciejhetman.caffeinate.session.CaffeineSession
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.collectLatest
@@ -20,13 +19,13 @@ import kotlinx.coroutines.launch
 class CaffeineTileService : TileService() {
 
     private var listenScope: CoroutineScope? = null
-    private var collectJob: Job? = null
 
     override fun onStartListening() {
         super.onStartListening()
+        listenScope?.cancel()
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
         listenScope = scope
-        collectJob = scope.launch {
+        scope.launch {
             CaffeineController.get(this@CaffeineTileService).session.collectLatest { session ->
                 applySession(session)
             }
@@ -34,8 +33,6 @@ class CaffeineTileService : TileService() {
     }
 
     override fun onStopListening() {
-        collectJob?.cancel()
-        collectJob = null
         listenScope?.cancel()
         listenScope = null
         super.onStopListening()
@@ -65,10 +62,7 @@ class CaffeineTileService : TileService() {
             CaffeineSession.Off -> Tile.STATE_INACTIVE
             is CaffeineSession.On -> Tile.STATE_ACTIVE
         }
-        val newSubtitle = when (session) {
-            CaffeineSession.Off -> getString(R.string.status_off)
-            is CaffeineSession.On -> session.displayRemaining()
-        }
+        val newSubtitle = subtitleFor(session)
         val stateChanged = tile.state != newState
         val subtitleChanged = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
             tile.subtitle?.toString() != newSubtitle
@@ -84,5 +78,12 @@ class CaffeineTileService : TileService() {
             tile.subtitle = newSubtitle
         }
         tile.updateTile()
+    }
+
+    private fun subtitleFor(session: CaffeineSession): String = when (session) {
+        CaffeineSession.Off -> getString(R.string.status_off)
+        is CaffeineSession.On -> session.remainingMillis
+            ?.let { CaffeineSession.formatCountdown(it) }
+            ?: getString(R.string.status_on)
     }
 }

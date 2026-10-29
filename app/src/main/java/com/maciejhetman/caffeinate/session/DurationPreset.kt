@@ -46,8 +46,8 @@ sealed class DurationPreset {
         /** Smallest value shown on the duration slider; aligned to [SLIDER_STEP_MINUTES]. */
         const val SLIDER_MIN_MINUTES = SLIDER_STEP_MINUTES
 
-        /** Material3 `steps` count for the duration slider range. */
-        val SLIDER_STEPS: Int = 0 // continuous track; snap via [snapToSliderStep]
+        /** Material3 `steps` count: discrete values between the slider's two endpoints. */
+        const val SLIDER_STEPS: Int = (MAX_MINUTES - SLIDER_MIN_MINUTES) / SLIDER_STEP_MINUTES - 1
 
         /** Snaps [minutes] to the nearest slider step within the allowed range. */
         fun snapToSliderStep(minutes: Int): Int {
@@ -74,7 +74,7 @@ sealed class DurationPreset {
 
         fun fromSerialized(value: String?): DurationPreset {
             if (value.isNullOrBlank()) return Default
-            if (value == SERIAL_INFINITE || value == "Infinite") return Infinite
+            if (value == SERIAL_INFINITE) return Infinite
             if (value.startsWith(SERIAL_TIMED_PREFIX)) {
                 val minutes = value.removePrefix(SERIAL_TIMED_PREFIX).toIntOrNull()
                     ?: return DefaultTimed
@@ -90,8 +90,5 @@ sealed class DurationPreset {
                 else -> Default
             }
         }
-
-        /** @deprecated Use [fromSerialized]. */
-        fun fromName(name: String?): DurationPreset = fromSerialized(name)
     }
 }

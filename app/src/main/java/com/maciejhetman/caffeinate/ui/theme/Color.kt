@@ -1,53 +1,86 @@
 package com.maciejhetman.caffeinate.ui.theme
 
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
 
 // Simple grey/white with a blue accent (fallback used when Material You dynamic color is off).
+// Every surface role is set so expressive components never fall back to the baseline purple.
 
-// Light scheme
-val BlueAccentLight = Color(0xFF1A73E8)
-val OnBlueAccentLight = Color(0xFFFFFFFF)
-val BlueAccentContainerLight = Color(0xFFD6E4FF)
-val OnBlueAccentContainerLight = Color(0xFF001B3F)
+internal val LightColorScheme = lightColorScheme(
+    primary = Color(0xFF0B57D0),
+    onPrimary = Color(0xFFFFFFFF),
+    primaryContainer = Color(0xFFD3E3FD),
+    onPrimaryContainer = Color(0xFF041E49),
+    inversePrimary = Color(0xFFA8C7FA),
+    secondary = Color(0xFF5F6368),
+    onSecondary = Color(0xFFFFFFFF),
+    secondaryContainer = Color(0xFFE3E5E8),
+    onSecondaryContainer = Color(0xFF1F2124),
+    tertiary = Color(0xFF146C2E),
+    onTertiary = Color(0xFFFFFFFF),
+    tertiaryContainer = Color(0xFFC4EED0),
+    onTertiaryContainer = Color(0xFF072711),
+    error = Color(0xFFB3261E),
+    onError = Color(0xFFFFFFFF),
+    errorContainer = Color(0xFFF9DEDC),
+    onErrorContainer = Color(0xFF410E0B),
+    background = Color(0xFFEDEFF2),
+    onBackground = Color(0xFF1F1F1F),
+    surface = Color(0xFFF8F9FB),
+    onSurface = Color(0xFF1F1F1F),
+    surfaceVariant = Color(0xFFE1E3E6),
+    onSurfaceVariant = Color(0xFF444746),
+    surfaceTint = Color(0xFF0B57D0),
+    inverseSurface = Color(0xFF303030),
+    inverseOnSurface = Color(0xFFF2F2F2),
+    outline = Color(0xFF747775),
+    outlineVariant = Color(0xFFC4C7C5),
+    scrim = Color(0xFF000000),
+    surfaceBright = Color(0xFFF8F9FB),
+    surfaceDim = Color(0xFFD9DBDE),
+    surfaceContainerLowest = Color(0xFFFFFFFF),
+    surfaceContainerLow = Color(0xFFF3F4F7),
+    surfaceContainer = Color(0xFFEDEFF2),
+    surfaceContainerHigh = Color(0xFFE7E9EC),
+    surfaceContainerHighest = Color(0xFFE1E3E6),
+)
 
-val GreyAccentLight = Color(0xFF5F6368)
-val OnGreyAccentLight = Color(0xFFFFFFFF)
-val GreyAccentContainerLight = Color(0xFFE8EAED)
-val OnGreyAccentContainerLight = Color(0xFF202124)
-
-val BlueTertiaryLight = Color(0xFF4285F4)
-val OnBlueTertiaryLight = Color(0xFFFFFFFF)
-
-val SurfaceWhite = Color(0xFFFAFAFA)
-val OnSurfaceDarkGrey = Color(0xFF1F1F1F)
-val SurfaceVariantLight = Color(0xFFE8EAED)
-val OnSurfaceVariantLight = Color(0xFF444746)
-val SurfaceContainerLowestLight = Color(0xFFE8EAED)
-val SurfaceContainerHighLight = Color(0xFFFFFFFF)
-val SurfaceContainerHighestLight = Color(0xFFE3E3E3)
-val OutlineLight = Color(0xFF747775)
-val OutlineVariantLight = Color(0xFFC4C7C5)
-
-// Dark scheme
-val BlueAccentDark = Color(0xFFA8C7FA)
-val OnBlueAccentDark = Color(0xFF00315C)
-val BlueAccentContainerDark = Color(0xFF00468A)
-val OnBlueAccentContainerDark = Color(0xFFD6E4FF)
-
-val GreyAccentDark = Color(0xFFC4C7C5)
-val OnGreyAccentDark = Color(0xFF2E3132)
-val GreyAccentContainerDark = Color(0xFF444746)
-val OnGreyAccentContainerDark = Color(0xFFE1E2E1)
-
-val BlueTertiaryDark = Color(0xFF7CACF8)
-val OnBlueTertiaryDark = Color(0xFF002E6A)
-
-val SurfaceDarkGrey = Color(0xFF1F1F1F)
-val OnSurfaceLightGrey = Color(0xFFE3E3E3)
-val SurfaceVariantDark = Color(0xFF444746)
-val OnSurfaceVariantDark = Color(0xFFC4C7C5)
-val SurfaceContainerLowestDark = Color(0xFF121212)
-val SurfaceContainerHighDark = Color(0xFF2D3135)
-val SurfaceContainerHighestDark = Color(0xFF3C4043)
-val OutlineDark = Color(0xFF8E918F)
-val OutlineVariantDark = Color(0xFF5F6368)
+internal val DarkColorScheme = darkColorScheme(
+    primary = Color(0xFFA8C7FA),
+    onPrimary = Color(0xFF062E6F),
+    primaryContainer = Color(0xFF0842A0),
+    onPrimaryContainer = Color(0xFFD3E3FD),
+    inversePrimary = Color(0xFF0B57D0),
+    secondary = Color(0xFFC4C7C5),
+    onSecondary = Color(0xFF2E3132),
+    secondaryContainer = Color(0xFF444746),
+    onSecondaryContainer = Color(0xFFE3E3E3),
+    tertiary = Color(0xFF6DD58C),
+    onTertiary = Color(0xFF0A3818),
+    tertiaryContainer = Color(0xFF0F5223),
+    onTertiaryContainer = Color(0xFFC4EED0),
+    error = Color(0xFFF2B8B5),
+    onError = Color(0xFF601410),
+    errorContainer = Color(0xFF8C1D18),
+    onErrorContainer = Color(0xFFF9DEDC),
+    background = Color(0xFF0E0F11),
+    onBackground = Color(0xFFE3E3E3),
+    surface = Color(0xFF131416),
+    onSurface = Color(0xFFE3E3E3),
+    surfaceVariant = Color(0xFF444746),
+    onSurfaceVariant = Color(0xFFC4C7C5),
+    surfaceTint = Color(0xFFA8C7FA),
+    inverseSurface = Color(0xFFE3E3E3),
+    inverseOnSurface = Color(0xFF303030),
+    outline = Color(0xFF8E918F),
+    outlineVariant = Color(0xFF444746),
+    scrim = Color(0xFF000000),
+    surfaceBright = Color(0xFF37393B),
+    surfaceDim = Color(0xFF131416),
+    surfaceContainerLowest = Color(0xFF0E0F11),
+    surfaceContainerLow = Color(0xFF1B1C1E),
+    surfaceContainer = Color(0xFF1F2022),
+    surfaceContainerHigh = Color(0xFF292A2D),
+    surfaceContainerHighest = Color(0xFF343538),
+)

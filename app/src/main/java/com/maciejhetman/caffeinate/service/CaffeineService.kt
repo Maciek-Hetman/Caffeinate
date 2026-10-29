@@ -1,5 +1,6 @@
 package com.maciejhetman.caffeinate.service
 
+import android.annotation.SuppressLint
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -22,9 +23,11 @@ import com.maciejhetman.caffeinate.R
 import com.maciejhetman.caffeinate.session.CaffeineController
 import com.maciejhetman.caffeinate.session.CaffeineSession
 import com.maciejhetman.caffeinate.session.DurationPreset
+import com.maciejhetman.caffeinate.ui.haptics.CaffeinateHaptics
+import java.text.DateFormat
+import java.util.Date
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
@@ -39,44 +42,38 @@ class CaffeineService : LifecycleService() {
     private var endsAtElapsedRealtime: Long? = null
     private var screenOffReceiverRegistered = false
 
+    /** True while this instance owns a running session that has not been ended yet. */
+    private var sessionRunning = false
+
     private val screenOffReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             if (intent.action != Intent.ACTION_SCREEN_OFF) return
-            val pendingResult = goAsync()
-            lifecycleScope.launch {
-                try {
-                    if (CaffeineController.get(this@CaffeineService).stopOnScreenOff.first()) {
-                        endSession()
-                    }
-                } finally {
-                    pendingResult.finish()
-                }
+            if (CaffeineController.get(context).settings.value.stopOnScreenOff) {
+                endSession()
             }
         }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
-        when (intent?.action) {
-            ACTION_STOP -> {
-                endSession()
-                return START_NOT_STICKY
-            }
-            ACTION_START, null -> {
-                val duration = DurationPreset.fromSerialized(intent?.getStringExtra(EXTRA_DURATION))
-                val endsAtEpoch = intent?.getLongExtra(EXTRA_ENDS_AT_EPOCH, -1L)?.takeIf { it > 0L }
-                beginSession(duration, endsAtEpoch)
-            }
+        if (intent?.action != ACTION_START) {
+            // ACTION_STOP, or an unexpected restart without a session to resume.
+            endSession()
+            return START_NOT_STICKY
         }
+        val duration = DurationPreset.fromSerialized(intent.getStringExtra(EXTRA_DURATION))
+        val endsAtEpoch = intent.getLongExtra(EXTRA_ENDS_AT_EPOCH, -1L).takeIf { it > 0L }
+        beginSession(duration, endsAtEpoch)
         return START_REDELIVER_INTENT
     }
 
-    private fun beginSession(duration: DurationPreset, endsAtEpochMillis: Long? = null) {
+    private fun beginSession(duration: DurationPreset, endsAtEpochMillis: Long?) {
         activeDuration = duration
         endsAtElapsedRealtime = when {
             endsAtEpochMillis != null && duration.isTimed -> {
                 val remaining = endsAtEpochMillis - System.currentTimeMillis()
                 if (remaining <= 0L) {
+                    // Redelivered after the session would already have ended.
                     endSession()
                     return
                 }
@@ -85,7 +82,11 @@ class CaffeineService : LifecycleService() {
             else -> duration.millis?.let { SystemClock.elapsedRealtime() + it }
         }
 
-        startAsForeground(remainingForNotification())
+        if (!startAsForeground()) {
+            endSession()
+            return
+        }
+        sessionRunning = true
         acquireWakeLock()
         registerScreenOffReceiver()
         publishState()
@@ -111,42 +112,35 @@ class CaffeineService : LifecycleService() {
 
     private fun startCountdown() {
         countdownJob?.cancel()
-        val endAt = endsAtElapsedRealtime ?: run {
-            // Infinite: still refresh notification periodically with ∞
-            countdownJob = lifecycleScope.launch {
-                while (isActive) {
-                    updateNotification(null)
-                    delay(30_000L)
-                }
-            }
-            return
-        }
+        // Infinite sessions have nothing to count; the notification never changes.
+        val endAt = endsAtElapsedRealtime ?: return
 
         countdownJob = lifecycleScope.launch {
             while (isActive) {
                 val remaining = endAt - SystemClock.elapsedRealtime()
                 if (remaining <= 0L) {
-                    com.maciejhetman.caffeinate.ui.haptics.CaffeinateHaptics.sessionExpired(this@CaffeineService)
+                    CaffeinateHaptics.sessionExpired(this@CaffeineService)
                     endSession()
                     return@launch
                 }
                 publishState(remaining)
-                updateNotification(remaining)
-                delay(1_000L)
+                // Wake on whole-second boundaries so the countdown never skips a digit.
+                delay((remaining % 1_000L).takeIf { it > 0L } ?: 1_000L)
             }
         }
     }
 
-    private fun remainingForNotification(): Long? =
+    private fun remainingMillis(): Long? =
         endsAtElapsedRealtime?.let { (it - SystemClock.elapsedRealtime()).coerceAtLeast(0L) }
 
-    private fun publishState(remainingOverride: Long? = remainingForNotification()) {
+    private fun endsAtEpochMillis(): Long? =
+        endsAtElapsedRealtime?.let { System.currentTimeMillis() + (it - SystemClock.elapsedRealtime()) }
+
+    private fun publishState(remainingOverride: Long? = remainingMillis()) {
         val session = CaffeineSession.On(
             duration = activeDuration,
             remainingMillis = if (activeDuration.isTimed) remainingOverride else null,
-            endsAtEpochMillis = endsAtElapsedRealtime?.let {
-                System.currentTimeMillis() + (it - SystemClock.elapsedRealtime())
-            },
+            endsAtEpochMillis = endsAtEpochMillis(),
         )
         CaffeineController.get(this).publishSession(session)
     }
@@ -155,6 +149,7 @@ class CaffeineService : LifecycleService() {
         countdownJob?.cancel()
         countdownJob = null
         endsAtElapsedRealtime = null
+        sessionRunning = false
         unregisterScreenOffReceiver()
         releaseWakeLock()
         CaffeineController.get(this).publishSession(CaffeineSession.Off)
@@ -162,6 +157,9 @@ class CaffeineService : LifecycleService() {
         stopSelf()
     }
 
+    // No timeout on purpose: an infinite session must hold the lock until the user stops it,
+    // and the system drops it anyway if this process dies.
+    @SuppressLint("WakelockTimeout")
     @Suppress("DEPRECATION")
     private fun acquireWakeLock() {
         if (wakeLock?.isHeld == true) return
@@ -182,32 +180,39 @@ class CaffeineService : LifecycleService() {
         wakeLock = null
     }
 
-    private fun startAsForeground(remainingMillis: Long?) {
+    /** Returns false when the platform refuses the foreground start (e.g. restarted in background). */
+    private fun startAsForeground(): Boolean {
         ensureChannel()
-        val notification = buildNotification(remainingMillis)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            ServiceCompat.startForeground(
-                this,
-                NOTIFICATION_ID,
-                notification,
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE,
-            )
-        } else {
-            startForeground(NOTIFICATION_ID, notification)
+        val notification = buildNotification()
+        return try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                ServiceCompat.startForeground(
+                    this,
+                    NOTIFICATION_ID,
+                    notification,
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE,
+                )
+            } else {
+                startForeground(NOTIFICATION_ID, notification)
+            }
+            true
+        } catch (_: Exception) {
+            false
         }
     }
 
-    private fun updateNotification(remainingMillis: Long?) {
-        val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-        nm.notify(NOTIFICATION_ID, buildNotification(remainingMillis))
-    }
-
-    /** Minimal, low-priority notification — required by Android to keep the foreground service alive. */
-    private fun buildNotification(remainingMillis: Long?): Notification {
+    /**
+     * Minimal, low-priority notification — required by Android to keep the foreground service
+     * alive. Timed sessions use a system-rendered countdown chronometer, so the notification is
+     * posted once per session instead of every second.
+     */
+    private fun buildNotification(): Notification {
+        val launchIntent = packageManager.getLaunchIntentForPackage(packageName)
+            ?: Intent(this, MainActivity::class.java)
         val openApp = PendingIntent.getActivity(
             this,
             0,
-            Intent(this, MainActivity::class.java),
+            launchIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
@@ -221,35 +226,39 @@ class CaffeineService : LifecycleService() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
-        val isInfinite = activeDuration is DurationPreset.Infinite || remainingMillis == null
-        val contentText = if (isInfinite) {
-            getString(R.string.notification_infinite)
-        } else {
-            getString(
-                R.string.notification_remaining,
-                CaffeineSession.formatCountdown(remainingMillis),
-            )
-        }
-
-        return NotificationCompat.Builder(this, CHANNEL_ID)
+        val endsAt = endsAtEpochMillis()
+        val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_caffeine_notification)
             .setContentTitle(getString(R.string.app_name))
-            .setContentText(contentText)
             .setContentIntent(openApp)
             .addAction(
                 R.drawable.ic_caffeine_notification,
                 getString(R.string.action_stop),
                 stopPending,
             )
+            .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setSilent(true)
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
-            .build()
+
+        if (endsAt != null && activeDuration.isTimed) {
+            val endTime = DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(endsAt))
+            builder
+                .setContentText(getString(R.string.status_until, endTime))
+                .setWhen(endsAt)
+                .setShowWhen(true)
+                .setUsesChronometer(true)
+                .setChronometerCountDown(true)
+        } else {
+            builder
+                .setContentText(getString(R.string.notification_infinite))
+                .setShowWhen(false)
+        }
+        return builder.build()
     }
 
     private fun ensureChannel() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         val channel = NotificationChannel(
             CHANNEL_ID,
@@ -266,7 +275,10 @@ class CaffeineService : LifecycleService() {
         countdownJob?.cancel()
         unregisterScreenOffReceiver()
         releaseWakeLock()
-        if (CaffeineController.get(this).session.value.isActive) {
+        // Only report Off if this instance was killed mid-session. After endSession() a new
+        // session may already be starting, and publishing Off here would clobber it.
+        if (sessionRunning) {
+            sessionRunning = false
             CaffeineController.get(this).publishSession(CaffeineSession.Off)
         }
         super.onDestroy()

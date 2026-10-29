@@ -1,0 +1,34 @@
+package com.maciejhetman.caffeinate.ui.components
+
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.toPath
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.center
+import androidx.compose.ui.graphics.Matrix
+import androidx.compose.ui.graphics.Outline
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.graphics.shapes.Morph
+
+/**
+ * A [Shape] that draws [morph] at [progress] (0 = start polygon, 1 = end polygon), scaled to the
+ * layout bounds and centred. Polygons are expected to be normalised (as MaterialShapes are).
+ */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+class MorphShape(
+    private val morph: Morph,
+    private val progress: Float,
+) : Shape {
+    override fun createOutline(
+        size: Size,
+        layoutDirection: LayoutDirection,
+        density: Density,
+    ): Outline {
+        val path: Path = morph.toPath(progress = progress)
+        path.transform(Matrix().apply { scale(x = size.width, y = size.height) })
+        path.translate(size.center - path.getBounds().center)
+        return Outline.Generic(path)
+    }
+}

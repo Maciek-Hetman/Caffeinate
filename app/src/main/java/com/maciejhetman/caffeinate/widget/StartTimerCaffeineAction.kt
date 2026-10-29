@@ -12,7 +12,7 @@ class StartTimerCaffeineAction : ActionCallback {
         glanceId: GlanceId,
         parameters: ActionParameters,
     ) {
-        CaffeineController.get(context).toggleWidgetTimerBlocking()
+        CaffeineController.get(context).toggleWidgetTimer()
         TimerCaffeineWidget().update(context, glanceId)
     }
 }

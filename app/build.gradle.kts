@@ -6,7 +6,10 @@ plugins {
 android {
     namespace = "com.maciejhetman.caffeinate"
     compileSdk {
-        version = release(37)
+        // Compose 1.13 (beta BOM) requires compiling against 37.1; targetSdk stays 37.
+        version = release(37) {
+            minorApiLevel = 1
+        }
     }
 
     defaultConfig {
